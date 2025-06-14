@@ -11,13 +11,49 @@ library(microeco)
 library(file2meco)
 library(RColorBrewer)
 
-ui <- navbarPage("MetaX",
+ui <- fluidPage(
+  tags$head(
+    tags$link(rel = "icon", type = "image/png", href = "favicon.png")
+  ),
+  navbarPage("MetaX",
                  id = "main_nav",
                  theme = bs_theme(
                    bootswatch = "morph", # https://bootswatch.com/
                    primary = "#006699",
                    base_font = font_google("Inter")
                  ),
+                 tabPanel("Home",
+                          fluidRow(
+                            column(10, offset = 1,
+                                   h2("Welcome to MetaX"),
+                                   p("This application allows you to explore microbial community data using various visualizations and analyses."),
+                                   tags$ul(
+                                     tags$li("💾 Start by uploading your ASV, taxonomy, and metadata tables(.csv) or phyloseq object(.rds) under 'Upload Data'."),
+                                     tags$li("🧪 Remove unwanted taxa and rarefy at filtering tab"),
+                                     tags$li("📈 Explore abundance, diversity, and dendrograms in the respective tabs."),
+                                     tags$li("🎯 Customize plots with the sidebar controls."),
+                                     tags$li("🧬 All plots support dynamic interaction based on your metadata."),
+                                     tags$li("🧑‍💻❌ No coding experience required — just upload your files and explore!")
+                                   ),
+                                   br(),
+                                   p("For questions, contact the ",
+                                     tags$a(href = "https://shanptom.github.io", target = "_blank", "developer on GitHub"),
+                                     "."),
+                                   
+                                   p("This application was built using the following R packages: ",
+                                     strong("shiny"), ", ",
+                                     strong("phyloseq"), ", ",
+                                     strong("microeco"), ", ",
+                                     strong("phylosmith"), ", ",
+                                     strong("vegan"), ", ",
+                                     strong("ggplot2"), ", ",
+                                     strong("RColorBrewer"), ", and ",
+                                     strong("bslib"), ".")
+                                   
+                            )
+                          )
+                 ),
+                 
                  tabPanel("Upload Data",
                           sidebarLayout(
                             sidebarPanel(
@@ -78,6 +114,7 @@ ui <- navbarPage("MetaX",
                                           selected = "bray"),
                               sliderInput("dend_label_size", "Label size:", min = 3, max = 10, value = 5, step = 1)
                             ),
+
                             mainPanel(plotOutput("dendrogramPlot", height = "950px", width = "100%")))
                           ),
                  tabPanel("Alpha Diversity",
@@ -99,11 +136,11 @@ ui <- navbarPage("MetaX",
                           sidebarLayout(
                             sidebarPanel(
                               selectInput("beta_dist", "Distance Method:",
-                                          choices = c("bray", "unifrac", "wunifrac", "jaccard","dpcoa", "jsd", "manhattan",
-                                                      "euclidean", "canberra",  "binomial"),
+                                          choices = c("bray", "unifrac", "wunifrac", "jaccard", "dpcoa", "jsd", "manhattan",
+                                                      "euclidean", "canberra", "binomial"),
                                           selected = "bray"),
                               selectInput("beta_ord", "Ordination Method:",
-                                          choices = c("NMDS", "MDS", "PCoA","DCA", "CCA", "RDA", "CAP", "DPCoA"),
+                                          choices = c("NMDS", "MDS", "PCoA", "DCA", "CCA", "RDA", "CAP", "DPCoA"),
                                           selected = "NMDS"),
                               uiOutput("beta_color_selector"),
                               uiOutput("beta_shape_selector"),
@@ -111,13 +148,19 @@ ui <- navbarPage("MetaX",
                               uiOutput("beta_facet_selector"),
                               sliderInput("beta_label_size", "Axis Text Size:", min = 6, max = 20, value = 12),
                               sliderInput("beta_label_text_size", "Label Text Size:", min = 2, max = 15, value = 3),
-                              sliderInput("beta_shape_size", "Shape Size:", min = 1, max = 10, value = 4)
+                              sliderInput("beta_shape_size", "Shape Size:", min = 1, max = 10, value = 4),
+                              tags$hr(),
+                              h4("PERMANOVA"),
+                              uiOutput("permanova_group_selector"),
+                              actionButton("run_permanova", "Run PERMANOVA"),
+                              verbatimTextOutput("permanova_result")
                             ),
-                            mainPanel(plotOutput("betaPlot", height = "950px", width = "100%"))
+                            mainPanel(
+                              plotOutput("betaPlot", height = "950px", width = "100%"))
                           )
                  )
 
-)
+))
 
 server <- function(input, output, session) {
   final_physeq <- reactiveVal()
@@ -446,6 +489,38 @@ server <- function(input, output, session) {
     }
     
     p
+  })
+  
+  output$permanova_group_selector <- renderUI({
+    req(final_physeq())
+    selectInput("permanova_group", "Select grouping variable:",
+                choices = names(sample_data(final_physeq())),
+                selected = names(sample_data(final_physeq()))[1])
+  })
+  
+  permanova_result <- reactiveVal()
+  
+  observeEvent(input$run_permanova, {
+    req(final_physeq(), input$permanova_group)
+    
+    dataset <- phyloseq2meco(final_physeq())
+    dataset$tidy_dataset()
+    dataset$cal_betadiv()
+    
+    t1 <- trans_beta$new(
+      dataset = dataset,
+      group = input$permanova_group,
+      measure = "bray"
+    )
+    
+    t1$cal_manova(manova_all = FALSE)
+    
+    permanova_result(t1$res_manova)
+  })
+
+  output$permanova_result <- renderPrint({
+    req(permanova_result())
+    permanova_result()
   })
   
   dendrogram_phyloseq_custom <- function(phyloseq_obj, treatment = NULL, method = "bray",
