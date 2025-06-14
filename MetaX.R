@@ -1,3 +1,5 @@
+
+
 library(shiny)
 library(bslib)
 library(phyloseq)
@@ -12,7 +14,7 @@ library(RColorBrewer)
 ui <- navbarPage("MetaX",
                  id = "main_nav",
                  theme = bs_theme(
-                   bootswatch = "cerulean",
+                   bootswatch = "morph", # https://bootswatch.com/
                    primary = "#006699",
                    base_font = font_google("Inter")
                  ),
@@ -24,62 +26,82 @@ ui <- navbarPage("MetaX",
                               fileInput("meta", "Upload Metadata Table (CSV)", accept = ".csv"),
                               fileInput("phylo", "Or Upload Phyloseq Object (.rds)", accept = ".rds")
                             ),
-                            mainPanel(
-                              verbatimTextOutput("upload_status")
-                            )
+                            mainPanel(verbatimTextOutput("upload_status"))
                           )
                  ),
                  tabPanel("Filtering",
                           sidebarLayout(
                             sidebarPanel(
-                              actionButton("skip_filter", "Skip Filtering"),
-                              actionButton("go_analysis", "Go to Analysis"),
+                              checkboxInput("skip_filter", "Skip Filtering"),
                               checkboxInput("doRarefy", "Apply rarefaction", value = FALSE),
                               uiOutput("taxa_filters"),
                               actionButton("apply_filter", "Apply Filtering"),
                               actionButton("go_analysis", "Go to Analysis")
                             ),
-                            mainPanel(
-                              verbatimTextOutput("filter_status")
-                            )
+                            mainPanel(verbatimTextOutput("filter_status"))
                           )
                  ),
                  tabPanel("Rarefaction Plot",
                           sidebarLayout(
                             sidebarPanel(
                               uiOutput("rarefaction_color_selector"),
-                              uiOutput("rarefaction_facet_selector")
+                              uiOutput("rarefaction_facet_selector"),
+                              sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12)
                             ),
-                            mainPanel(
-                              plotOutput("rarefactionPlot")
-                            )
+                            mainPanel(plotOutput("rarefactionPlot",height = "1000px", width = "100%"))
                           )
                  ),
                  tabPanel("Abundance",
                           sidebarLayout(
                             sidebarPanel(
+                              radioButtons("abund_plot_type", "Plot Type:",
+                                           choices = c("Bar" = "bar", "Line" = "line","Heatmap" = "heat"),
+                                           selected = "bar"),
                               uiOutput("tax_rank_selector"),
-                              sliderInput("ntaxa", "Number of Top Taxa:", min = 5, max = 15, value = 8, step = 1)),
-                            mainPanel(
-                              plotOutput("abundancePlot")
-                            )
+                              sliderInput("ntaxa", "Number of Top Taxa:", min = 5, max = 15, value = 8, step = 1),
+                              uiOutput("abundance_facet_selector"),
+                              textInput("abund_order", "Custom Order (comma-separated):", value = ""),
+                              sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12)
+                            ),
+                            mainPanel(plotOutput("abundancePlot", height = "1000px", width = "100%"))
                           )
                  ),
                  tabPanel("Alpha Diversity",
                           sidebarLayout(
                             sidebarPanel(
-                              selectInput("alpha_index", "Select Diversity Index:",
-                                          choices = c("shannon", "simpson", "invsimpson"), selected = "shannon"),
+                              checkboxGroupInput("alpha_index", "Select Diversity Index:",
+                                                 choices = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"),
+                                                 selected = c("Shannon")),
                               uiOutput("alpha_group_selector"),
-                              textInput("alpha_order", "Custom order (comma-separated values)", value = "")
+                              uiOutput("alpha_colour_selector"),
+                              checkboxInput("flip_alpha", "Flip axes (horizontal plot)", value = FALSE),
+                              textInput("alpha_order", "Custom order (comma-separated values)", value = ""),
+                              sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12)
                             ),
-                            mainPanel(
-                              plotOutput("alphaPlot")
-                            )
+                            mainPanel(plotOutput("alphaPlot",height = "950px", width = "100%"))
                           )
                  ),
-                 tabPanel("Beta Diversity", plotOutput("betaPlot")),
-                 tabPanel("Ordination", plotOutput("ordinationPlot"))
+                 tabPanel("Beta Diversity",
+                          sidebarLayout(
+                            sidebarPanel(
+                              selectInput("beta_dist", "Distance Method:",
+                                          choices = c("bray", "unifrac", "wunifrac", "jaccard","dpcoa", "jsd", "manhattan",
+                                                      "euclidean", "canberra",  "binomial"),
+                                          selected = "bray"),
+                              selectInput("beta_ord", "Ordination Method:",
+                                          choices = c("NMDS", "MDS", "PCoA","DCA", "CCA", "RDA", "CAP", "DPCoA"),
+                                          selected = "NMDS"),
+                              uiOutput("beta_color_selector"),
+                              uiOutput("beta_shape_selector"),
+                              uiOutput("beta_label_selector"),
+                              uiOutput("beta_facet_selector"),
+                              sliderInput("beta_label_size", "Axis Text Size:", min = 6, max = 20, value = 12),
+                              sliderInput("beta_label_text_size", "Label Text Size:", min = 2, max = 15, value = 3),
+                              sliderInput("beta_shape_size", "Shape Size:", min = 1, max = 10, value = 4)
+                            ),
+                            mainPanel(plotOutput("betaPlot", height = "950px", width = "100%"))
+                          )
+                 ),
 )
 
 server <- function(input, output, session) {
@@ -118,9 +140,7 @@ server <- function(input, output, session) {
     req(raw_physeq())
     ranks <- colnames(as.data.frame(tax_table(raw_physeq())))
     lapply(ranks, function(rank) {
-      textInput(inputId = paste0("filter_", rank),
-                label = paste("Exclude", rank, "(comma-separated):"),
-                value = "")
+      textInput(paste0("filter_", rank), paste("Exclude", rank, "(comma-separated):"), "")
     })
   })
   
@@ -131,29 +151,17 @@ server <- function(input, output, session) {
     to_remove <- rep(FALSE, ntaxa(ps))
     
     for (rank in ranks) {
-      input_vals <- input[[paste0("filter_", rank)]]
-      if (nzchar(input_vals)) {
-        exclude_list <- trimws(unlist(strsplit(input_vals, ",")))
+      vals <- input[[paste0("filter_", rank)]]
+      if (nzchar(vals)) {
+        exclude_list <- trimws(unlist(strsplit(vals, ",")))
         to_remove <- to_remove | taxdf[[rank]] %in% exclude_list
       }
     }
     
     ps <- prune_taxa(!to_remove, ps)
-    
-    if (input$doRarefy) {
-      ps <- rarefy_even_depth(ps,
-                              sample.size = min(sample_sums(ps)),
-                              rngseed = 123,
-                              replace = TRUE,
-                              trimOTUs = TRUE,
-                              verbose = FALSE)
-    }
-    
     df <- as.data.frame(sample_data(ps))
     for (var in colnames(df)) {
-      if (is.character(df[[var]]) || is.factor(df[[var]])) {
-        ordering_rules[[var]] <- unique(df[[var]])
-      }
+      if (is.character(df[[var]]) || is.factor(df[[var]])) ordering_rules[[var]] <- unique(df[[var]])
     }
     ordering_rules$Sample <- sample_names(ps)
     final_physeq(ps)
@@ -161,26 +169,13 @@ server <- function(input, output, session) {
     if (any(sample_sums(ps) == 0)) {
       showNotification("Warning: some samples have zero reads after filtering.", type = "warning")
     }
-    
   })
-  
-  
   
   observeEvent(input$skip_filter, {
     ps <- raw_physeq()
-    if (input$doRarefy) {
-      ps <- rarefy_even_depth(ps,
-                              sample.size = min(sample_sums(ps)),
-                              rngseed = 123,
-                              replace = TRUE,
-                              trimOTUs = TRUE,
-                              verbose = FALSE)
-    }
     df <- as.data.frame(sample_data(ps))
     for (var in colnames(df)) {
-      if (is.character(df[[var]]) || is.factor(df[[var]])) {
-        ordering_rules[[var]] <- unique(df[[var]])
-      }
+      if (is.character(df[[var]]) || is.factor(df[[var]])) ordering_rules[[var]] <- unique(df[[var]])
     }
     ordering_rules$Sample <- sample_names(ps)
     final_physeq(ps)
@@ -188,6 +183,14 @@ server <- function(input, output, session) {
   
   observeEvent(input$go_analysis, {
     req(final_physeq())
+    if (input$doRarefy) {
+      ps <- rarefy_even_depth(final_physeq(),
+                              sample.size = min(sample_sums(final_physeq())),
+                              rngseed = 123, replace = TRUE,
+                              trimOTUs = TRUE, verbose = FALSE
+      )
+      final_physeq(ps)
+    }
     updateNavbarPage(session, "main_nav", selected = "Rarefaction Plot")
   })
   
@@ -196,116 +199,16 @@ server <- function(input, output, session) {
     cat("Current number of ASVs:", ntaxa(final_physeq()))
   })
   
-  output$rarefactionPlot <- renderPlot({
-    req(final_physeq(), input$rare_color)
-    
-    ps <- final_physeq()
-    
-    # Ensure counts are integers
-    otu_table(ps) <- otu_table(round(otu_table(ps)), taxa_are_rows = TRUE)
-    
-    # Double-check sample_sums
-    if (any(sample_sums(ps) == 0)) {
-      showNotification("Some samples have 0 counts. Rarefaction plot may not work.", type = "error")
-      return(NULL)
-    }
-    
-    p <- ggrare(ps, step = 1000, color = input$rare_color, label = "Sample", se = FALSE) +
-      theme_minimal()
-    
-    if (!is.null(input$rare_facet) && input$rare_facet != "None") {
-      p <- p + facet_wrap(as.formula(paste("~", input$rare_facet)))
-    }
-    
-    p
-  })
-  
-  
   output$rarefaction_color_selector <- renderUI({
     req(final_physeq())
-    meta_cols <- colnames(sample_data(final_physeq()))
-    selectInput("rare_color", "Color by (metadata column):", choices = meta_cols, selected = meta_cols[1])
+    cols <- colnames(sample_data(final_physeq()))
+    selectInput("rare_color", "Color by:", choices = cols, selected = cols[1])
   })
   
   output$rarefaction_facet_selector <- renderUI({
     req(final_physeq())
-    meta_cols <- colnames(sample_data(final_physeq()))
-    selectInput("rare_facet", "Facet by (metadata column):", choices = c("None", meta_cols), selected = "None")
-  })
-  
-  output$alpha_group_selector <- renderUI({
-    req(final_physeq())
-    meta_cols <- colnames(sample_data(final_physeq()))
-    selectInput("alpha_group", "Group by (metadata column):", choices = meta_cols, selected = meta_cols[1])
-  })
-  
-  
-  output$tax_rank_selector <- renderUI({
-    req(final_physeq())
-    tax_ranks <- colnames(as.data.frame(tax_table(final_physeq())))
-    selectInput("tax_rank", "Select Taxonomic Rank:",
-                choices = tax_ranks,
-                selected = tail(tax_ranks, 1))  # default to most specific
-  })
-  
-  output$abundancePlot <- renderPlot({
-    req(final_physeq())
-    
-    dataset <- phyloseq2meco(final_physeq())
-    dataset$tidy_dataset()
-    dataset$cal_abund()
-    
-    t1 <- trans_abund$new(
-      dataset = dataset,
-      taxrank = input$tax_rank,
-      ntaxa = input$ntaxa
-    )
-    p4 <- t1$plot_bar(
-      bar_type = "notfull",
-      use_alluvium = TRUE,
-      clustering = TRUE,
-      xtext_angle = 90,
-      xtext_size = 6,
-      color_values = RColorBrewer::brewer.pal(8, "Set2")
-    )
-    
-    for (var in names(ordering_rules)) {
-      if (var %in% colnames(p4$data)) {
-        p4$data[[var]] <- factor(p4$data[[var]], levels = ordering_rules[[var]])
-      }
-    }
-    
-    p4
-  })
-  
-  output$betaPlot <- renderPlot({
-    req(final_physeq())
-    dist <- phyloseq::distance(final_physeq(), method = "bray")
-    ord <- ordinate(final_physeq(), method = "PCoA", distance = dist)
-    plot_ordination(final_physeq(), ord, color = "SampleID") + theme_minimal()
-  })
-  
-  output$alphaPlot <- renderPlot({
-    req(final_physeq(), input$alpha_index, input$alpha_group)
-    p <- alpha_diversity_graph(final_physeq(), index = input$alpha_index,
-                               treatment = input$alpha_group, subset = NULL, colors = "default")
-    p <- reorder_factor_column(p, input$alpha_group, input$alpha_order)
-    p
-  })
-  
-  output$ordinationPlot <- renderPlot({
-    req(final_physeq())
-    ord <- ordinate(final_physeq(), method = "NMDS", distance = "bray")
-    plot_ordination(final_physeq(), ord, color = "SampleID") + theme_minimal()
-  })
-  
-  output$tax_selector <- renderUI({
-    req(final_physeq())
-    mdf <- tryCatch(psmelt(final_physeq()), error = function(e) return(NULL))
-    if (is.null(mdf)) return(NULL)
-    tax_cols <- setdiff(colnames(mdf), c("OTU", "Sample", "Abundance", "Count", "value", "variable"))
-    if (length(tax_cols) == 0) return(NULL)
-    selectInput("tax_level", "Select Taxonomy Level", choices = tax_cols, selected = tax_cols[1])
+    cols <- colnames(sample_data(final_physeq()))
+    selectInput("rare_facet", "Facet by:", choices = c("None", cols), selected = "None")
   })
   
   reorder_factor_column <- function(p, group_var, order_string) {
@@ -315,6 +218,217 @@ server <- function(input, output, session) {
     }
     return(p)
   }
+  
+  output$rarefactionPlot <- renderPlot({
+    req(final_physeq(), input$rare_color)
+    ps <- final_physeq()
+    otu_table(ps) <- otu_table(round(otu_table(ps)), taxa_are_rows = TRUE)
+    if (any(sample_sums(ps) == 0)) {
+      showNotification("Some samples have 0 counts. Rarefaction plot may not work.", type = "error")
+      return(NULL)
+    }
+    p <- ggrare(ps, step = 1000, color = input$rare_color, label = "Sample", se = FALSE) + theme_minimal()
+    if (!is.null(input$rare_facet) && input$rare_facet != "None") {
+      p <- p + facet_wrap(as.formula(paste("~", input$rare_facet)))
+    }
+    p +
+      theme(
+        axis.text = element_text(size = input$beta_label_size),
+        axis.title = element_text(size = input$beta_label_size),
+        legend.text = element_text(size = input$beta_label_size),
+        legend.title = element_text(size = input$beta_label_size)
+      )
+  })
+  
+  output$tax_rank_selector <- renderUI({
+    req(final_physeq())
+    tax_ranks <- colnames(as.data.frame(tax_table(final_physeq())))
+    selectInput("tax_rank", "Select Taxonomic Rank:", choices = tax_ranks, selected = tail(tax_ranks, 1))
+  })
+  
+  output$abundance_facet_selector <- renderUI({
+    req(final_physeq())
+    meta_cols <- colnames(sample_data(final_physeq()))
+    selectInput("abund_facet", "Facet by:", choices = c("None", meta_cols), selected = "None")
+  })
+  
+  output$abundancePlot <- renderPlot({
+    req(final_physeq(), input$tax_rank, input$ntaxa)
+    dataset <- phyloseq2meco(final_physeq())
+    dataset$tidy_dataset()
+    dataset$cal_abund()
+    t1 <- trans_abund$new(dataset = dataset, taxrank = input$tax_rank, ntaxa = input$ntaxa)
+    
+    if (input$abund_plot_type == "line") {
+      p4 <- t1$plot_bar(
+        bar_type = "notfull",
+        use_alluvium = TRUE,
+        clustering = TRUE,
+        xtext_angle = 90,
+        color_values = RColorBrewer::brewer.pal(8, "Set2")
+      )
+    } else if (input$abund_plot_type == "heat") {
+      p4 <- t1$plot_heatmap(
+        xtext_keep = FALSE,
+        withmargin = FALSE,
+        plot_breaks = c(0.01, 0.1, 1, 10)
+      )
+    } else {
+      p4 <- t1$plot_bar(
+        others_color = "grey70",
+        xtext_angle = 90,
+        legend_text_italic = FALSE
+      )
+    }
+    
+    for (var in names(ordering_rules)) {
+      if (var %in% colnames(p4$data)) {
+        p4$data[[var]] <- factor(p4$data[[var]], levels = ordering_rules[[var]])
+      }
+    }
+    
+    if (!is.null(input$abund_facet) && input$abund_facet != "None") {
+      facet_formula <- as.formula(paste("~", input$abund_facet))
+      p4 <- p4 + facet_wrap(facet_formula, scales = "free_x")
+    }
+    # Apply custom ordering if specified
+    if (nzchar(input$abund_order)) {
+      custom_order <- trimws(unlist(strsplit(input$abund_order, ",")))
+      
+      if (input$abund_facet %in% colnames(p4$data)) {
+        p4$data[[input$abund_facet]] <- factor(p4$data[[input$abund_facet]], levels = custom_order)
+      } else if ("Sample" %in% colnames(p4$data)) {
+        p4$data$Sample <- factor(p4$data$Sample, levels = custom_order)
+      }
+    }
+    
+    p4 +
+      theme(
+        axis.text = element_text(size = input$beta_label_size),
+        axis.title = element_text(size = input$beta_label_size),
+        legend.text = element_text(size = input$beta_label_size),
+        legend.title = element_text(size = input$beta_label_size)
+      )
+  })
+  
+  output$alpha_group_selector <- renderUI({
+    req(final_physeq())
+    meta_cols <- colnames(sample_data(final_physeq()))
+    selectInput("alpha_group", "Group by:",
+                choices = c("None", meta_cols),
+                selected = "None")
+  })
+  
+  output$alpha_colour_selector <- renderUI({
+    req(final_physeq())
+    meta_cols <- colnames(sample_data(final_physeq()))
+    selectInput("alpha_colour", "Colour",  choices = c("None", meta_cols),
+                selected = "None")
+  })
+  
+  
+  output$alphaPlot <- renderPlot({
+    req(final_physeq())
+    validate(need(length(input$alpha_index) > 0, "Please select at least one diversity index."))
+    
+    x_var <- if (input$alpha_group == "None") "samples" else input$alpha_group
+    scale_type <- if (input$flip_alpha) "free_x" else "free_y"
+    
+    # Base plot
+    p <- plot_richness(
+      final_physeq(),
+      x = x_var,
+      measures = input$alpha_index,
+      scales = scale_type
+    )
+    
+    # Apply color only if valid
+    if (input$alpha_colour != "None") {
+      p <- p + aes_string(color = input$alpha_colour)
+    }
+    
+    # Reorder if custom order given
+    p <- reorder_factor_column(p, x_var, input$alpha_order)
+    
+    p <- p + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    
+    if (input$flip_alpha) {
+      p <- p + coord_flip()
+    }
+    
+    p +
+      theme(
+        axis.text = element_text(size = input$beta_label_size),
+        axis.title = element_text(size = input$beta_label_size),
+        legend.text = element_text(size = input$beta_label_size),
+        legend.title = element_text(size = input$beta_label_size),
+        strip.text = element_text(size = input$beta_label_size)
+      )
+  })
+  
+  output$beta_color_selector <- renderUI({
+    req(final_physeq())
+    cols <- colnames(sample_data(final_physeq()))
+    selectInput("beta_color", "Color by:", choices = c("None", cols), selected = "None")
+  })
+  
+  output$beta_shape_selector <- renderUI({
+    req(final_physeq())
+    cols <- colnames(sample_data(final_physeq()))
+    selectInput("beta_shape", "Shape by:", choices = c("None", cols), selected = "None")
+  })
+  
+  output$beta_label_selector <- renderUI({
+    req(final_physeq())
+    cols <- colnames(sample_data(final_physeq()))
+    selectInput("beta_label", "Label points by:", choices = c("None", cols), selected = "None")
+  })
+  
+  output$beta_facet_selector <- renderUI({
+    req(final_physeq())
+    cols <- colnames(sample_data(final_physeq()))
+    selectInput("beta_facet", "Facet by:", choices = c("None", cols), selected = "None")
+  })
+  
+  
+  
+  output$betaPlot <- renderPlot({
+    req(final_physeq())
+    
+    dist <- distance(final_physeq(), method = input$beta_dist)
+    ord <- ordinate(final_physeq(), method = input$beta_ord, distance = dist)
+    
+    p <- plot_ordination(final_physeq(), ord, 
+                         color = input$beta_color, 
+                         shape = if (input$beta_shape != "None") input$beta_shape else NULL) +
+      theme_minimal() +
+      geom_point(size = input$beta_shape_size)
+    
+    #  labels only if selected
+    if (!is.null(input$beta_label) && input$beta_label != "None") {
+      p <- p + geom_text(aes_string(label = input$beta_label), 
+                         size = input$beta_label_text_size, 
+                         vjust = -1)
+    }
+    
+    # Apply theme and text size
+    p <- p + theme(
+      axis.text = element_text(size = input$beta_label_size),
+      axis.title = element_text(size = input$beta_label_size),
+      legend.text = element_text(size = input$beta_label_size),
+      legend.title = element_text(size = input$beta_label_size),
+      strip.text = element_text(size = input$beta_label_size)
+    )
+    
+
+    if (!is.null(input$beta_facet) && input$beta_facet != "None") {
+      p <- p + facet_wrap(as.formula(paste("~", input$beta_facet)))
+    }
+    
+    p
+  })
+  
+  
 }
 
 shinyApp(ui = ui, server = server)
