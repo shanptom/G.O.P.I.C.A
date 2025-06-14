@@ -61,11 +61,25 @@ ui <- navbarPage("MetaX",
                               sliderInput("ntaxa", "Number of Top Taxa:", min = 5, max = 15, value = 8, step = 1),
                               uiOutput("abundance_facet_selector"),
                               textInput("abund_order", "Custom Order (comma-separated):", value = ""),
-                              sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12)
+                              sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12),
+                              checkboxInput("flip_abundance", "Flip axes (horizontal plot)", value = FALSE),
                             ),
                             mainPanel(plotOutput("abundancePlot", height = "1000px", width = "100%"))
                           )
                  ),
+                 tabPanel("Dendrogram",
+                          sidebarLayout(
+                            sidebarPanel(
+                              uiOutput("dend_treatment_selector"),
+                              selectInput("dend_method", "Select distance method:",
+                                          choices = c("euclidian", "manhattan", "canberra", "clark", "bray",
+                                                      "kulczynski", "jaccard", "gower", "altGower", "morisita",
+                                                      "horn", "mountford", "raup", "binomial", "chao", "cao", "mahalanobis"),
+                                          selected = "bray"),
+                              sliderInput("dend_label_size", "Label size:", min = 3, max = 10, value = 5, step = 1)
+                            ),
+                            mainPanel(plotOutput("dendrogramPlot", height = "950px", width = "100%")))
+                          ),
                  tabPanel("Alpha Diversity",
                           sidebarLayout(
                             sidebarPanel(
@@ -101,7 +115,8 @@ ui <- navbarPage("MetaX",
                             ),
                             mainPanel(plotOutput("betaPlot", height = "950px", width = "100%"))
                           )
-                 ),
+                 )
+
 )
 
 server <- function(input, output, session) {
@@ -258,6 +273,7 @@ server <- function(input, output, session) {
     dataset$tidy_dataset()
     dataset$cal_abund()
     t1 <- trans_abund$new(dataset = dataset, taxrank = input$tax_rank, ntaxa = input$ntaxa)
+    scale_type <- if (input$flip_abundance) "free_y" else "free_x"
     
     if (input$abund_plot_type == "line") {
       p4 <- t1$plot_bar(
@@ -289,7 +305,7 @@ server <- function(input, output, session) {
     
     if (!is.null(input$abund_facet) && input$abund_facet != "None") {
       facet_formula <- as.formula(paste("~", input$abund_facet))
-      p4 <- p4 + facet_wrap(facet_formula, scales = "free_x")
+      p4 <- p4 + facet_wrap(facet_formula, scales = scale_type)
     }
     # Apply custom ordering if specified
     if (nzchar(input$abund_order)) {
@@ -300,6 +316,10 @@ server <- function(input, output, session) {
       } else if ("Sample" %in% colnames(p4$data)) {
         p4$data$Sample <- factor(p4$data$Sample, levels = custom_order)
       }
+    }
+    
+    if (input$flip_abundance) {
+      p4 <- p4 + coord_flip()
     }
     
     p4 +
@@ -427,6 +447,67 @@ server <- function(input, output, session) {
     
     p
   })
+  
+  dendrogram_phyloseq_custom <- function(phyloseq_obj, treatment = NULL, method = "bray",
+                                         colors = "default", label_size = 2.5) {
+    dend <- phylosmith::dendrogram_phyloseq(
+      phyloseq_obj = phyloseq_obj,
+      treatment = treatment,
+      method = method,
+      colors = colors
+    )
+    
+    # Identify and replace the geom_label layer with new size
+    label_data <- NULL
+    label_mapping <- NULL
+    
+    for (layer in dend$layers) {
+      if (inherits(layer$geom, "GeomLabel") || inherits(layer$geom, "GeomText")) {
+        label_data <- layer$data
+        label_mapping <- layer$mapping
+      }
+    }
+    
+    if (!is.null(label_data)) {
+      dend$layers <- Filter(function(l) {
+        !inherits(l$geom, "GeomLabel") && !inherits(l$geom, "GeomText")
+      }, dend$layers)
+      
+      dend <- dend + 
+        ggplot2::geom_label(
+          data = label_data,
+          mapping = label_mapping,
+          size = label_size,
+          color = "white",
+          label.padding = unit(0.2, "lines"),
+          fontface = "bold",
+          hjust = 1.05
+        )
+    }
+    
+    return(dend)
+  }
+  
+  output$dend_treatment_selector <- renderUI({
+    req(final_physeq())
+    selectInput("dend_treatment", "Select metadata column for grouping:",
+                choices = names(sample_data(final_physeq())),
+                selected = names(sample_data(final_physeq()))[1])
+  })
+  
+  output$dendrogramPlot <- renderPlot({
+    req(final_physeq(), input$dend_method, input$dend_treatment, input$dend_label_size)
+    
+    dend <- dendrogram_phyloseq_custom(
+      phyloseq_obj = final_physeq(),
+      treatment = input$dend_treatment,
+      method = input$dend_method,
+      label_size = input$dend_label_size
+    )
+    
+    dend
+  })
+  
   
   
 }
