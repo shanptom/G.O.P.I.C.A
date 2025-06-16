@@ -144,36 +144,54 @@ ui <- fluidPage(
                             mainPanel(plotOutput("alphaPlot",height = "950px", width = "100%"))
                           )
                  ),
-                 tabPanel("Beta Diversity",
-                          sidebarLayout(
-                            sidebarPanel(
-                              selectInput("beta_dist", "Distance Method:",
-                                          choices = c("bray", "unifrac", "wunifrac", "jaccard", "dpcoa", "jsd", "manhattan",
-                                                      "euclidean", "canberra", "binomial"),
-                                          selected = "bray"),
-                              selectInput("beta_ord", "Ordination Method:",
-                                          choices = c("NMDS", "MDS", "PCoA", "DCA", "CCA", "RDA", "CAP", "DPCoA"),
-                                          selected = "NMDS"),
-                              uiOutput("beta_color_selector"),
-                              uiOutput("beta_shape_selector"),
-                              uiOutput("beta_label_selector"),
-                              uiOutput("beta_facet_selector"),
-                              sliderInput("beta_label_size", "Axis Text Size:", min = 6, max = 20, value = 12),
-                              sliderInput("beta_label_text_size", "Label Text Size:", min = 2, max = 15, value = 3),
-                              sliderInput("beta_shape_size", "Shape Size:", min = 1, max = 10, value = 4),
-                              tags$hr(),
-                              h4("PERMANOVA"),
-                              uiOutput("permanova_group_selector"),
-                              actionButton("run_permanova", "Run PERMANOVA"),
-                              verbatimTextOutput("permanova_result")
-                            ),
-                            mainPanel(
-                              plotOutput("betaPlot", height = "950px", width = "100%"))
-                          )
-                 )
+             tabPanel("Beta Diversity",
+                      sidebarLayout(
+                        sidebarPanel(
+                          selectInput("beta_dist", "Distance Method:",
+                                      choices = c("bray", "unifrac", "wunifrac", "jaccard", "dpcoa", "jsd", "manhattan",
+                                                  "euclidean", "canberra", "binomial"),
+                                      selected = "bray"),
+                          selectInput("beta_ord", "Ordination Method:",
+                                      choices = c("NMDS", "MDS", "PCoA", "DCA", "CCA", "RDA", "CAP", "DPCoA"),
+                                      selected = "NMDS"),
+                          uiOutput("beta_color_selector"),
+                          uiOutput("beta_shape_selector"),
+                          uiOutput("beta_label_selector"),
+                          uiOutput("beta_facet_selector"),
+                          sliderInput("beta_label_size", "Axis Text Size:", min = 6, max = 20, value = 12),
+                          sliderInput("beta_label_text_size", "Label Text Size:", min = 2, max = 15, value = 3),
+                          sliderInput("beta_shape_size", "Shape Size:", min = 1, max = 10, value = 4),
+                          tags$hr(),
+                          h4("PERMANOVA"),
+                          uiOutput("permanova_group_selector"),
+                          actionButton("run_permanova", "Run PERMANOVA"),
+                          verbatimTextOutput("permanova_result")
+                        ),
+                        mainPanel(
+                          plotOutput("betaPlot", height = "950px", width = "100%")
+                        )
+                      )
+             ),
+             
+             tabPanel("tSNE",
+                      sidebarLayout(
+                        sidebarPanel(
+                          uiOutput("tsne_group_selector"),
+                          uiOutput("tsne_perplexity_selector"),
+                          checkboxInput("tsne_circle", "Draw circles", value = FALSE),
+                          uiOutput("tsne_label_selector")
+                        ),
+                        mainPanel(
+                          plotOutput("tsne_plot", height = "700px")
+                        )
+                      )
+             )
+  ))
 
-))
-
+             
+             
+             
+             
 server <- function(input, output, session) {
   final_physeq <- reactiveVal()
   ordering_rules <- reactiveValues()
@@ -602,6 +620,46 @@ server <- function(input, output, session) {
     
     dend
   })
+  
+  output$tsne_group_selector <- renderUI({
+    req(final_physeq())
+    selectInput("tsne_group", "Group samples by:",
+                choices = names(sample_data(final_physeq())),
+                selected = names(sample_data(final_physeq()))[2])
+  })
+  
+  
+  output$tsne_perplexity_selector <- renderUI({
+    req(final_physeq())
+    
+    n_samples <- nsamples(final_physeq())
+    max_perplexity <- floor((n_samples - 1) / 3)
+    max_perplexity <- max(5, min(max_perplexity, 50))  # reasonable bounds
+    
+    sliderInput("tsne_perplexity", "Perplexity:",
+                min = 5, max = max_perplexity, value = min(10, max_perplexity))
+  })
+  
+  output$tsne_label_selector <- renderUI({
+    req(final_physeq())
+    selectInput("tsne_label", "Label samples by:",
+                choices = c("None", names(sample_data(final_physeq()))),
+                selected = "None")
+  })
+  
+  output$tsne_plot <- renderPlot({
+    req(final_physeq(), input$tsne_group)
+    
+    tsne_phyloseq(
+      phyloseq_obj = final_physeq(),
+      treatment = input$tsne_group,
+      perplexity = input$tsne_perplexity,
+      circle = input$tsne_circle,
+      labels = if (input$tsne_label != "None") input$tsne_label else NULL,
+      colors = "default"
+    )
+  })
+  
   
   
   
