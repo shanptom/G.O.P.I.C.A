@@ -1,6 +1,7 @@
 
 
 library(shiny)
+library(shinyBS)
 library(bslib)
 library(phyloseq)
 library(ggplot2)
@@ -10,6 +11,7 @@ library(phylosmith)
 library(microeco)
 library(file2meco)
 library(RColorBrewer)
+library(ggalluvial)
 
 ui <- fluidPage(
   tags$head(
@@ -33,11 +35,11 @@ ui <- fluidPage(
                                      tags$li("📈 Explore abundance, diversity, and dendrograms in the respective tabs."),
                                      tags$li("🎯 Customize plots with the sidebar controls."),
                                      tags$li("🧬 All plots support dynamic interaction based on your metadata."),
-                                     tags$li("🧑‍💻❌ No coding experience required — just upload your files and explore!")
+                                     tags$li(" no coding experience required — just upload your files and explore!")
                                    ),
                                    br(),
                                    p("For questions, contact the ",
-                                     tags$a(href = "https://shanptom.github.io", target = "_blank", "developer on GitHub"),
+                                     tags$a(href = "https://shanptom.github.io", target = "_blank", "developer."),
                                      "."),
                                    
                                    p("This application was built using the following R packages: ",
@@ -87,21 +89,31 @@ ui <- fluidPage(
                             mainPanel(plotOutput("rarefactionPlot",height = "1000px", width = "100%"))
                           )
                  ),
-                 tabPanel("Abundance",
-                          sidebarLayout(
-                            sidebarPanel(
-                              radioButtons("abund_plot_type", "Plot Type:",
-                                           choices = c("Bar" = "bar", "Line" = "line","Heatmap" = "heat"),
-                                           selected = "bar"),
-                              uiOutput("tax_rank_selector"),
-                              sliderInput("ntaxa", "Number of Top Taxa:", min = 5, max = 15, value = 8, step = 1),
-                              uiOutput("abundance_facet_selector"),
-                              textInput("abund_order", "Custom Order (comma-separated):", value = ""),
-                              sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12),
-                              checkboxInput("flip_abundance", "Flip axes (horizontal plot)", value = FALSE),
+             tabPanel("Abundance",
+                      sidebarLayout(
+                        sidebarPanel(
+                          radioButtons("abund_plot_type", "Plot Type:",
+                                       choices = c("Bar" = "bar", "Line" = "line", "Heatmap" = "heat"),
+                                       selected = "bar"),
+                          uiOutput("tax_rank_selector"),
+                          sliderInput("ntaxa", "Number of Top Taxa:", min = 5, max = 15, value = 8, step = 1),
+                          uiOutput("abundance_facet_selector"),
+                          
+                          div(
+                            style = "display: flex; align-items: center;",
+                            tags$label(
+                              "Custom Order (comma-separated):",
+                              `title` = "Specify sample names in the order you want them to appear on the plot. Example: Sample3, Sample2, Sample1"
                             ),
-                            mainPanel(plotOutput("abundancePlot", height = "1000px", width = "100%"))
-                          )
+                
+                          ),
+                          textInput("abund_order", label = NULL, value = ""),
+                          
+                          sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12),
+                          checkboxInput("flip_abundance", "Flip axes (horizontal plot)", value = FALSE)
+                        ),
+                        mainPanel(plotOutput("abundancePlot", height = "1000px", width = "100%"))
+                      )
                  ),
                  tabPanel("Dendrogram",
                           sidebarLayout(
@@ -181,6 +193,14 @@ server <- function(input, output, session) {
       )
     }
   })
+  
+  log_message <- function(message) {
+    timestamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+    cat(paste0("[", timestamp, "] ", message, "\n"), 
+        file = "metax_log.txt", 
+        append = TRUE)
+  }
+
   
   output$upload_status <- renderPrint({
     if (!is.null(input$phylo)) {
