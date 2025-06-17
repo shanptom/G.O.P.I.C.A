@@ -15,6 +15,9 @@ library(file2meco)
 library(GUniFrac)
 library(RColorBrewer)
 library(ggalluvial)
+library(dplyr)
+library(ggcor)
+
 
 ui <- fluidPage(
   useShinyjs(),
@@ -28,47 +31,49 @@ ui <- fluidPage(
                    primary = "#006699",
                    base_font = font_google("Inter")
                  ),
-                 tabPanel("Home",
-                          fluidRow(
-                            column(10, offset = 1,
-                                   h2("Welcome to MetaX"),
-                                   p("This application allows you to explore microbial community data using various visualizations and analyses."),
-                                   tags$ul(
-                                     tags$li("💾 Start by uploading your ASV, taxonomy, and metadata tables(.csv) or phyloseq object(.rds) under 'Upload Data'."),
-                                     tags$li("🧪 Remove unwanted taxa and rarefy at filtering tab"),
-                                     tags$li("📈 Explore abundance, diversity, and dendrograms in the respective tabs."),
-                                     tags$li("🎯 Customize plots with the sidebar controls."),
-                                     tags$li("🧬 All plots support dynamic interaction based on your metadata."),
-                                     tags$li("👨‍💻 no coding experience required — just upload your files and explore!")
-                                   ),
-                                   br(),
-                                   h3("Metadata Analysis"),
-                                   p("The Metadata Analysis tab lets users explore patterns in metadata and how 
-                                   they relate to the microbial community.It uses the env class from the microeco package to 
-                                   perform constrained ordination. To generate the correct plots, make sure the metadata 
-                                   columns you select are purely numerical and placed next to each other (e.g., columns 2–5). 
-                                   Then, enter the starting and ending column numbers in the provided fields."),
-                                   p("⚠️ Note: If any selected column contains non-numeric values (like text or factor data), 
-                                   the process may fail. Please double-check that all selected columns are numeric."),
-                                   h3("Contact"),
-                                   p("For questions, contact the ",
-                                     tags$a(href = "https://shanptom.github.io", target = "_blank", "developer."),
-                                     ),
-                                   h3("References"),
-                                   p("This application was built using the following R packages: ",
-                                     strong("shiny"), ", ",
-                                     strong("phyloseq"), ", ",
-                                     strong("microeco"), ", ",
-                                     strong("phylosmith"), ", ",
-                                     strong("vegan"), ", ",
-                                     strong("ggplot2"), ", ",
-                                     strong("RColorBrewer"), ", and ",
-                                     strong("bslib"), ".")
-                                   
-                            )
-                          )
-                 ),
-                 
+             tabPanel("Home",
+                      fluidRow(
+                        column(10, offset = 1,
+                               h2("Welcome to MetaX"),
+                               p("This application allows you to explore microbial community data using various visualizations and analyses."),
+                               tags$ul(
+                                 tags$li("💾 Start by uploading your ASV, taxonomy, and metadata tables (.csv) or phyloseq object (.rds) under 'Upload Data'."),
+                                 tags$li("🧪 Remove unwanted taxa and rarefy at the filtering tab."),
+                                 tags$li("📈 Explore abundance, diversity, and dendrograms in the respective tabs."),
+                                 tags$li("🎯 Customize plots with the sidebar controls."),
+                                 tags$li("🧬 All plots support dynamic interaction based on your metadata."),
+                                 tags$li("👨‍💻 No coding experience required — just upload your files and explore!")
+                               ),
+                               br(),
+                               h3("Metadata Analysis"),
+                               p("The Metadata Analysis tab lets users explore patterns in metadata and how they relate to the microbial community. It uses the ",
+                                 code("env"),
+                                 " class from the ",
+                                 strong("microeco"),
+                                 " package to perform constrained ordination. To generate the correct plots, make sure the metadata columns you select are purely numerical and placed next to each other (e.g., columns 2–5). Then, enter the starting and ending column numbers in the provided fields."
+                               ),
+                               p("⚠️ Note: If any selected column contains non-numeric values (like text or factor data), the process may fail. Please double-check that all selected columns are numeric."),
+                               
+                               h3("Contact"),
+                               p("For questions, contact the ",
+                                 tags$a(href = "https://shanptom.github.io", target = "_blank", "developer."),
+                                 "."
+                               ),
+                               
+                               h3("References"),
+                               p("This application was built using the following R packages: ",
+                                 strong("shiny"), ", ",
+                                 strong("phyloseq"), ", ",
+                                 strong("microeco"), ", ",
+                                 strong("phylosmith"), ", ",
+                                 strong("vegan"), ", ",
+                                 strong("ggplot2"), ", ",
+                                 strong("RColorBrewer"), ", and ",
+                                 strong("bslib"), ".")
+                        )
+                      )
+             ),
+             
                  tabPanel("Upload Data",
                           sidebarLayout(
                             sidebarPanel(
@@ -234,6 +239,20 @@ server <- function(input, output, session) {
   final_physeq <- reactiveVal()
   ordering_rules <- reactiveValues()
   reactiveValues_envfit <- reactiveValues(transenv = NULL)
+  selected_analysis <- reactiveVal(NULL)
+  
+  observeEvent(input$run_rda, {
+    selected_analysis("rda")
+  })
+  
+  observeEvent(input$run_corr, {
+    selected_analysis("corr")
+  })
+  
+  observeEvent(input$run_mantel, {
+    selected_analysis("mantel")
+  })
+  
 
   
   raw_physeq <- reactive({
@@ -712,9 +731,7 @@ server <- function(input, output, session) {
     env_obj <- trans_env$new(dataset = dataset, env_cols = input$colx:input$coly)
     reactiveValues_envfit$transenv <- env_obj
     
-    output$continue_button_ui <- renderUI({
-      actionButton("go_to_visual", "RDA")
-    })
+
     
     output$transenv_display <- renderPrint({
       env_obj
@@ -722,32 +739,80 @@ server <- function(input, output, session) {
   })
   
   output$visualization_sidebar <- renderUI({
-    req(input$go_to_visual)
     req(reactiveValues_envfit$transenv)
     
     sample_meta <- as.data.frame(sample_data(final_physeq()))
     factor_vars <- names(sample_meta)[sapply(sample_meta, function(x) is.factor(x) || is.character(x))]
     
-    wellPanel(
-      checkboxInput("adjust_arrow_length", "Adjust Arrow Length", TRUE),
-      sliderInput("max_perc_env", "Max Percentage of Explained Env Fit (arrows)", min = 0.05, max = 1, value = 0.3, step = 0.05),
-      selectInput("rda_color", "Color by:", choices = factor_vars, selected = factor_vars[1]),
-      selectInput("rda_shape", "Point Shape", choices = factor_vars,selected = factor_vars[1]),
-      selectInput("rda_label", "Sample Labels:", choices = c("None", names(sample_meta)), selected = "None"),
-      sliderInput("rda_textsize", "Text Size", value = 3, min = 3, max = 8, step = 1)
+    tagList(
+      h4("Select Analysis"),
+      div(
+        style = "margin-top: 10px; margin-bottom: 10px;",
+        fluidRow(
+          column(4, div(style = "text-align: center;", actionButton("run_rda", "RDA", class = "btn-primary"))),
+          column(4, div(style = "text-align: center;", actionButton("run_corr", "Correlation", class = "btn-secondary"))),
+          column(4, div(style = "text-align: center;", actionButton("run_mantel", "Mantel", class = "btn-warning")))
+        )
+      ),
       
+      
+      # Only show RDA controls when RDA is selected
+      conditionalPanel(
+        condition = "input.run_rda % 2 == 1",
+        wellPanel(
+          checkboxInput("adjust_arrow_length", "Adjust Arrow Length", TRUE),
+          sliderInput("max_perc_env", "Max Percentage of Explained Env Fit (arrows)", min = 0.05, max = 1, value = 0.3, step = 0.05),
+          selectInput("rda_color", "Color by:", choices = factor_vars, selected = factor_vars[1]),
+          selectInput("rda_shape", "Point Shape", choices = factor_vars, selected = factor_vars[1]),
+          selectInput("rda_label", "Sample Labels:", choices = c("None", names(sample_meta)), selected = "None"),
+          sliderInput("rda_textsize", "Text Size", value = 3, min = 3, max = 8, step = 1)
+        )
+      ),
+      conditionalPanel(
+        condition = "input.run_corr % 2 == 1",
+        wellPanel(
+          selectInput("input_method", "Correlation Method", choices = c("pearson", "spearman", "kendall"), selected = "spearman"),
+          numericInput("input_threshold", "Abundance Threshold", value = 0.001, min = 0.00001, max = 0.9, step = 0.001),
+          selectInput("p_type", "P-value Adjustment Type", choices = c("All", "Taxa", "Env"), selected = "All"),
+          selectInput("group_by", "Group By", choices = c("None", names(sample_meta)), selected = "None"),
+          sliderInput("Cortext_size", "Text Size", value = 10, min = 7, max = 20, step = 2),
+          sliderInput("xtextangle", "Text angle",  value = 0,min=0,max = 180, step = 30)
+        )
+      ),
+      conditionalPanel(
+        condition = "output.analysis_mode == 'mantel'",
+        wellPanel(
+          selectInput("mantel_group", "Group By:", choices = names(sample_data(final_physeq())), selected = names(sample_data(final_physeq()))[1]),
+          actionButton("run_mantel_analysis", "Run Mantel Test")
+        )
+      )
     )
   })
   
+  
+  output$analysis_mode <- reactive({
+    selected_analysis()
+  })
+  outputOptions(output, "analysis_mode", suspendWhenHidden = FALSE)
+  
   output$visualization_main <- renderUI({
-    req(input$go_to_visual)
+    req(selected_analysis())
     req(reactiveValues_envfit$transenv)
+    req(selected_analysis())
     
-    plotOutput("rda_plot",height = "90vh")
+    if (selected_analysis() == "rda") {
+      plotOutput("rda_plot", height = "90vh")
+    } else if (selected_analysis() == "corr") {
+      plotOutput("corr_plot", height = "90vh")
+    } else if (selected_analysis() == "mantel") {
+      plotOutput("mantel_plot", height = "90vh")
+    }
+    
   })
   
+  
   output$rda_plot <- renderPlot({
-    req(input$go_to_visual)
+    req(selected_analysis())
     req(reactiveValues_envfit$transenv)
     
     e1 <- reactiveValues_envfit$transenv
@@ -778,6 +843,93 @@ server <- function(input, output, session) {
     
     print(rda_plot)
   })
+  
+  output$corr_plot <- renderPlot({
+    req(reactiveValues_envfit$transenv)
+    
+    e1 <- reactiveValues_envfit$transenv
+    group_by <- if (input$group_by == "None") NULL else input$group_by
+    
+    e1$cal_cor(
+      method = input$input_method,
+      add_abund_table = NULL,
+      filter_thres = input$input_threshold,
+      p_adjust_method = "fdr",
+      p_adjust_type = input$p_type,
+      by_group = group_by,
+      group_use = NULL
+    )
+    
+    corr_plot <- e1$plot_cor(
+      xtext_angle = input$xtextangle,
+      xtext_size = input$Cortext_size,
+      ytext_size = input$Cortext_size
+    )
+    print(corr_plot)
+  })
+  
+  observeEvent(input$run_mantel_analysis, {
+    req(final_physeq())
+    
+    dataset <- phyloseq2meco(final_physeq())
+    dataset$tidy_dataset()
+    
+    # Get group variable
+    group_col <- input$mantel_group
+    group_vals <- unique(sample_data(final_physeq())[[group_col]])
+    env_range <- input$colx:input$coly
+    
+    if (length(group_vals) < 2) {
+      showNotification("You need at least two groups to compare.", type = "error")
+      return(NULL)
+    }
+    
+    # Pre-allocate results
+    mantel_tables <- list()
+    mantel_objs <- list()
+    
+    for (g in group_vals) {
+      d <- clone(dataset)
+      d$sample_table <- d$sample_table[d$sample_table[[group_col]] == g, ]
+      d$tidy_dataset()
+      d$cal_betadiv()
+      
+      t <- trans_env$new(dataset = d, env_cols = env_range)
+      t$cal_mantel(use_measure = "bray", partial_mantel = TRUE)
+      
+      x <- data.frame(spec = g, t$res_mantel)[, c(1, 3, 6, 8)]
+      colnames(x) <- c("spec", "env", "r", "p.value")
+      x <- x %>% mutate(
+        rd = cut(r, breaks = c(-Inf, 0.3, 0.6, Inf), labels = c("< 0.3", "0.3 - 0.6", ">= 0.6")),
+        pd = cut(p.value, breaks = c(-Inf, 0.01, 0.05, Inf), labels = c("< 0.01", "0.01 - 0.05", ">= 0.05"))
+      )
+      
+      mantel_tables[[g]] <- x
+      mantel_objs[[g]] <- t
+    }
+    
+    combined_table <- do.call(rbind, mantel_tables)
+    
+
+    output$mantel_plot <- renderPlot({
+      req(mantel_objs[[1]])
+      
+      MantCorr.Sn <- quickcor(mantel_objs[[1]]$data_env, type = "upper", cor.test = TRUE, show.diag = FALSE) +
+        geom_square() +
+        #geom_mark(sig.thres = 0.05, color = "black", size = 0) +
+        anno_link(aes(colour = pd, size = rd), data = combined_table) +
+        scale_size_manual(values = c(0.5, 1.5, 3)) +
+        scale_colour_manual(values = c("#D95F02", "#1B9E77", "#A2A2A288")) +
+        guides(size = guide_legend(title = "Mantel's r", override.aes = list(colour = "grey35"), order = 2),
+               colour = guide_legend(title = "Mantel's p", override.aes = list(size = 3), order = 1),
+               fill = guide_colorbar(title = "Pearson's r", order = 3))
+      
+      MantCorr.Sn
+    })
+  })
+  
+  
+  
   
 }
 
