@@ -2,6 +2,8 @@
 
 library(shiny)
 library(shinyBS)
+library(shinyjs)
+library(shinycssloaders)
 library(bslib)
 library(phyloseq)
 library(ggplot2)
@@ -10,10 +12,12 @@ library(ranacapa)
 library(phylosmith)
 library(microeco)
 library(file2meco)
+library(GUniFrac)
 library(RColorBrewer)
 library(ggalluvial)
 
 ui <- fluidPage(
+  useShinyjs(),
   tags$head(
     tags$link(rel = "icon", type = "image/png", href = "favicon.png")
   ),
@@ -35,13 +39,22 @@ ui <- fluidPage(
                                      tags$li("📈 Explore abundance, diversity, and dendrograms in the respective tabs."),
                                      tags$li("🎯 Customize plots with the sidebar controls."),
                                      tags$li("🧬 All plots support dynamic interaction based on your metadata."),
-                                     tags$li(" no coding experience required — just upload your files and explore!")
+                                     tags$li("👨‍💻 no coding experience required — just upload your files and explore!")
                                    ),
                                    br(),
+                                   h3("Metadata Analysis"),
+                                   p("The Metadata Analysis tab lets users explore patterns in metadata and how 
+                                   they relate to the microbial community.It uses the env class from the microeco package to 
+                                   perform constrained ordination. To generate the correct plots, make sure the metadata 
+                                   columns you select are purely numerical and placed next to each other (e.g., columns 2–5). 
+                                   Then, enter the starting and ending column numbers in the provided fields."),
+                                   p("⚠️ Note: If any selected column contains non-numeric values (like text or factor data), 
+                                   the process may fail. Please double-check that all selected columns are numeric."),
+                                   h3("Contact"),
                                    p("For questions, contact the ",
                                      tags$a(href = "https://shanptom.github.io", target = "_blank", "developer."),
-                                     "."),
-                                   
+                                     ),
+                                   h3("References"),
                                    p("This application was built using the following R packages: ",
                                      strong("shiny"), ", ",
                                      strong("phyloseq"), ", ",
@@ -67,7 +80,7 @@ ui <- fluidPage(
                             mainPanel(verbatimTextOutput("upload_status"))
                           )
                  ),
-                 tabPanel("Filtering",
+                 tabPanel("Filter",
                           sidebarLayout(
                             sidebarPanel(
                               checkboxInput("skip_filter", "Skip Filtering"),
@@ -185,7 +198,32 @@ ui <- fluidPage(
                           plotOutput("tsne_plot", height = "700px")
                         )
                       )
+             ),
+             tabPanel("Metadata Analysis",
+                      fluidRow(
+                        column(
+                          width = 3,
+                          # Initial controls (trans_env creation)
+                          numericInput("colx", "Enter the column number where numerical data starts:", value = 1, min = 1),
+                          numericInput("coly", "Enter the column number where numerical data ends:", value = 1, min = 1),
+                          actionButton("create_transenv", "Create trans_env Object"),
+                          br(), br(),
+                          verbatimTextOutput("transenv_display"),
+                          uiOutput("continue_button_ui"),
+                          
+                          # Collapsible RDA controls (only visible after "Continue")
+                          uiOutput("visualization_sidebar")
+                        ),
+                        column(
+                          width = 9,
+                          uiOutput("visualization_main")  # RDA plot output
+                        )
+                      )
              )
+             
+             
+
+             
   ))
 
              
@@ -195,6 +233,8 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   final_physeq <- reactiveVal()
   ordering_rules <- reactiveValues()
+  reactiveValues_envfit <- reactiveValues(transenv = NULL)
+
   
   raw_physeq <- reactive({
     if (!is.null(input$phylo)) {
@@ -660,8 +700,84 @@ server <- function(input, output, session) {
     )
   })
   
+  observeEvent(input$create_transenv, {
+    req(final_physeq(), input$colx, input$coly)
+    
+    dataset <- phyloseq2meco(final_physeq())
+    dataset$tidy_dataset()
+    dataset$cal_abund()
+    dataset$cal_alphadiv()
+    dataset$cal_betadiv()
+    
+    env_obj <- trans_env$new(dataset = dataset, env_cols = input$colx:input$coly)
+    reactiveValues_envfit$transenv <- env_obj
+    
+    output$continue_button_ui <- renderUI({
+      actionButton("go_to_visual", "RDA")
+    })
+    
+    output$transenv_display <- renderPrint({
+      env_obj
+    })
+  })
   
+  output$visualization_sidebar <- renderUI({
+    req(input$go_to_visual)
+    req(reactiveValues_envfit$transenv)
+    
+    sample_meta <- as.data.frame(sample_data(final_physeq()))
+    factor_vars <- names(sample_meta)[sapply(sample_meta, function(x) is.factor(x) || is.character(x))]
+    
+    wellPanel(
+      checkboxInput("adjust_arrow_length", "Adjust Arrow Length", TRUE),
+      sliderInput("max_perc_env", "Max Percentage of Explained Env Fit (arrows)", min = 0.05, max = 1, value = 0.3, step = 0.05),
+      selectInput("rda_color", "Color by:", choices = factor_vars, selected = factor_vars[1]),
+      selectInput("rda_shape", "Point Shape", choices = factor_vars,selected = factor_vars[1]),
+      selectInput("rda_label", "Sample Labels:", choices = c("None", names(sample_meta)), selected = "None"),
+      sliderInput("rda_textsize", "Text Size", value = 3, min = 3, max = 8, step = 1)
+      
+    )
+  })
   
+  output$visualization_main <- renderUI({
+    req(input$go_to_visual)
+    req(reactiveValues_envfit$transenv)
+    
+    plotOutput("rda_plot",height = "90vh")
+  })
+  
+  output$rda_plot <- renderPlot({
+    req(input$go_to_visual)
+    req(reactiveValues_envfit$transenv)
+    
+    e1 <- reactiveValues_envfit$transenv
+    
+    e1$cal_ordination(
+      method = "RDA",
+      feature_sel = FALSE
+    )
+    
+    e1$trans_ordination(
+      adjust_arrow_length = input$adjust_arrow_length,
+      max_perc_env = input$max_perc_env
+    )
+    
+    label_input <- if (input$rda_label == "None") NULL else input$rda_label
+    shape_input <- if (input$rda_shape == "None") NULL else input$rda_shape
+    
+
+    
+    
+    rda_plot <- e1$plot_ordination(
+      plot_color = input$rda_color,
+      plot_shape = shape_input,
+      env_text_size = input$rda_textsize,
+      taxa_text_size = input$rda_textsize,
+      add_sample_label = label_input
+    )
+    
+    print(rda_plot)
+  })
   
 }
 
