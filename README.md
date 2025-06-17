@@ -11,14 +11,13 @@ MetaX is an interactive R Shiny application for microbial community data explora
 ## 🚀 Features
 
 - 📁 **Upload Data**: Load ASV, taxonomy, and metadata tables or a pre-built phyloseq `.rds` object.
-- 🔬 **Filtering**: Remove taxa, apply rarefaction, or normalize using TSS/CLR.
+- 🔬 **Filtering**: Remove taxa, apply rarefaction, or normalize using TSS.
 - 📊 **Alpha & Beta Diversity**: Plot Shannon, Simpson, NMDS, PCoA, PERMANOVA, etc.
 - 🌿 **Abundance Analysis**: Bar plots, heatmaps, and alluvial plots by taxonomic rank.
 - 🌲 **Dendrograms**: Visualize hierarchical clustering of samples.
 - 📉 **Rarefaction**: Assess sequencing depth across samples.
 - 🧠 **Metadata Analysis**: Perform constrained ordination (RDA/CCA/dbRDA), correlations, and Mantel tests.
 - 📈 **Regression**: Relate taxa abundance to environmental variables using `microeco` models.
-- 📄 **Report Generator**: Select outputs and download an HTML summary report.
 
 ---
 
