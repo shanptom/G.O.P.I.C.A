@@ -224,10 +224,29 @@ ui <- fluidPage(
                           uiOutput("visualization_main")  # RDA plot output
                         )
                       )
+                      
+             ),
+             tabPanel("Regression",
+                      fluidRow(
+                        column(
+                          width = 3,
+                          uiOutput("tax_rank_selector_regression"),
+                          uiOutput("taxa_selector_regression"),
+                          selectInput("env_var", "Select Environmental Variable:",
+                                      choices = NULL),
+                          uiOutput("regression_group_selector"),
+                          actionButton("run_scatter", "Run Scatter Plot"),
+                          sliderInput("point_alpha", "Point Alpha:", min = 0.1, max = 1, value = 0.5, step = 0.1),
+                          sliderInput("point_size", "Point Size:", min = 1, max = 6, value = 3),
+                          
+                        ),
+                        column(
+                          width = 9,
+                          plotOutput("regression_plot", height = "900px")
+                        )
+                      )
              )
              
-             
-
              
   ))
 
@@ -926,6 +945,84 @@ server <- function(input, output, session) {
       
       MantCorr.Sn
     })
+  })
+  
+  observe({
+    req(final_physeq())
+    updateSelectInput(session, "env_var",
+                      choices = names(sample_data(final_physeq())))
+  })
+  
+
+  # Step 1: Dynamic taxonomic rank selector
+  output$tax_rank_selector_regression <- renderUI({
+    req(final_physeq())
+    ranks <- colnames(as.data.frame(tax_table(final_physeq())))
+    selectInput("tax_rank_regression", "Select Taxonomic Rank:", 
+                choices = ranks, selected = tail(ranks, 1))
+  })
+  
+  # Step 2: Taxa list updates based on selected rank
+  output$taxa_selector_regression <- renderUI({
+    req(final_physeq(), input$tax_rank_regression)
+    
+    dataset <- phyloseq2meco(final_physeq())
+    dataset$tidy_dataset()
+    dataset$cal_abund()
+    
+    rank_table <- dataset$taxa_abund[[input$tax_rank_regression]]
+    validate(need(!is.null(rank_table), "Abundance table for selected rank not found."))
+    
+    taxa_names <- rownames(rank_table)
+    selectInput("selected_taxon", "Select Taxon (Lineage):",
+                choices = taxa_names, selected = taxa_names[1])
+  })
+  
+  
+  output$regression_group_selector <- renderUI({
+    req(final_physeq())
+    meta_cols <- colnames(sample_data(final_physeq()))
+    selectInput("group", "Group by:", choices = c("None", meta_cols), selected = "None")
+  })
+  
+  
+  
+  output$regression_plot <- renderPlot({
+    req(input$run_scatter)
+    req(input$tax_rank_regression, input$selected_taxon, input$env_var)
+    req(final_physeq())
+    
+    # Prepare dataset and env object
+    dataset <- phyloseq2meco(final_physeq())
+    dataset$tidy_dataset()
+    dataset$cal_abund()
+    
+    # Create trans_env object if not already stored
+    env_obj <- trans_env$new(dataset = dataset, env_cols = input$env_var)
+    
+    # Get abundance vector for selected taxon
+    rank_table <- dataset$taxa_abund[[input$tax_rank_regression]]
+    validate(need(input$selected_taxon %in% rownames(rank_table), "Selected taxon not found."))
+    lineage_vector <- as.numeric(rank_table[input$selected_taxon, ])
+    
+    group_val <- if (input$group == "None") NULL else input$group
+    
+    # Generate plot using plot_scatterfit()
+    p <- env_obj$plot_scatterfit(
+      x = lineage_vector,
+      y = input$env_var,
+      group = group_val,
+      type = "lm",
+      point_size = input$point_size,
+      point_alpha = input$point_alpha,
+      line_color = "#2A0E3C",
+      line_se_color = "#A87CA0",
+      label.x.npc = "left", label.y.npc = "top",
+      x_axis_title = input$selected_taxon,
+      y_axis_title = input$env_var
+    ) 
+    
+    print(p)
   })
   
   
