@@ -37,8 +37,6 @@ You can upload:
 
 ## 🔧 Normalization Options
 
-Only one method can be used per analysis session:
-
 - **None**: Use raw counts.
 - **Rarefaction**: Subsample each sample to a common read depth.
 
