@@ -183,27 +183,24 @@ ui <- fluidPage(
                           h4("PERMANOVA"),
                           uiOutput("permanova_group_selector"),
                           actionButton("run_permanova", "Run PERMANOVA"),
-                          verbatimTextOutput("permanova_result")
+                          verbatimTextOutput("permanova_result"),
+                          tags$hr(),
+                          h4("tSNE Analysis"),
+                          uiOutput("tsne_group_selector"),
+                          uiOutput("tsne_perplexity_selector"),
+                          checkboxInput("tsne_circle", "Draw circles", value = FALSE),
+                          uiOutput("tsne_label_selector"),
+                          actionButton("run_tsne", "Run tSNE")
                         ),
                         mainPanel(
-                          plotOutput("betaPlot", height = "950px", width = "100%")
+                          plotOutput("betaPlot", height = "950px", width = "100%"),
+                          plotOutput("tsne_plot", height = "950px", width = "100%")
+                        
                         )
                       )
              ),
              
-             tabPanel("tSNE",
-                      sidebarLayout(
-                        sidebarPanel(
-                          uiOutput("tsne_group_selector"),
-                          uiOutput("tsne_perplexity_selector"),
-                          checkboxInput("tsne_circle", "Draw circles", value = FALSE),
-                          uiOutput("tsne_label_selector")
-                        ),
-                        mainPanel(
-                          plotOutput("tsne_plot", height = "700px")
-                        )
-                      )
-             ),
+
              tabPanel("Metadata Analysis",
                       fluidRow(
                         column(
@@ -726,6 +723,7 @@ server <- function(input, output, session) {
   })
   
   output$tsne_plot <- renderPlot({
+    req(input$run_tsne)
     req(final_physeq(), input$tsne_group)
     
     tsne_phyloseq(
