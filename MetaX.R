@@ -45,19 +45,10 @@ ui <- fluidPage(
                                  tags$li("👨‍💻 No coding experience required — just upload your files and explore!")
                                ),
                                br(),
-                               h3("Metadata Analysis"),
-                               p("The Metadata Analysis tab lets users explore patterns in metadata and how they relate to the microbial community. It uses the ",
-                                 code("env"),
-                                 " class from the ",
-                                 strong("microeco"),
-                                 " package to perform constrained ordination. To generate the correct plots, make sure the metadata columns you select are purely numerical and placed next to each other (e.g., columns 2–5). Then, enter the starting and ending column numbers in the provided fields."
-                               ),
-                               p("⚠️ Note: If any selected column contains non-numeric values (like text or factor data), the process may fail. Please double-check that all selected columns are numeric."),
-                               
+
                                h3("Contact"),
                                p("For questions, contact the ",
                                  tags$a(href = "https://shanptom.github.io", target = "_blank", "developer."),
-                                 "."
                                ),
                                
                                h3("References"),
@@ -73,7 +64,13 @@ ui <- fluidPage(
                         )
                       )
              ),
-             
+             tabPanel("User Guide",
+                      fluidRow(
+                        column(10, offset = 1,
+                               includeMarkdown("user_guide.md")
+                        )
+                      )
+             ),
                  tabPanel("Upload Data",
                           sidebarLayout(
                             sidebarPanel( width = 3,
@@ -133,20 +130,7 @@ ui <- fluidPage(
                         mainPanel(width = 9,plotOutput("abundancePlot", height = "770px", width = "100%"))
                       )
                  ),
-                 tabPanel("Dendrogram",
-                          sidebarLayout(
-                            sidebarPanel(width = 3,
-                              uiOutput("dend_treatment_selector"),
-                              selectInput("dend_method", "Select distance method:",
-                                          choices = c("euclidian", "manhattan", "canberra", "clark", "bray",
-                                                      "kulczynski", "jaccard", "gower", "altGower", "morisita",
-                                                      "horn", "mountford", "raup", "binomial", "chao", "cao", "mahalanobis"),
-                                          selected = "bray"),
-                              sliderInput("dend_label_size", "Label size:", min = 3, max = 10, value = 5, step = 1)
-                            ),
 
-                            mainPanel(width = 9,plotOutput("dendrogramPlot", height = "770px", width = "100%")))
-                          ),
                  tabPanel("Alpha Diversity",
                           sidebarLayout(
                             sidebarPanel(width = 3,
@@ -162,6 +146,20 @@ ui <- fluidPage(
                             mainPanel(width = 9,plotOutput("alphaPlot",height = "770px", width = "100%"))
                           )
                  ),
+             tabPanel("Dendrogram",
+                      sidebarLayout(
+                        sidebarPanel(width = 3,
+                                     uiOutput("dend_treatment_selector"),
+                                     selectInput("dend_method", "Select distance method:",
+                                                 choices = c("euclidian", "manhattan", "canberra", "clark", "bray",
+                                                             "kulczynski", "jaccard", "gower", "altGower", "morisita",
+                                                             "horn", "mountford", "raup", "binomial", "chao", "cao", "mahalanobis"),
+                                                 selected = "bray"),
+                                     sliderInput("dend_label_size", "Label size:", min = 3, max = 10, value = 5, step = 1)
+                        ),
+                        
+                        mainPanel(width = 9,plotOutput("dendrogramPlot", height = "770px", width = "100%")))
+             ),
              tabPanel("Beta Diversity",
                       sidebarLayout(
                         sidebarPanel(width = 3,
