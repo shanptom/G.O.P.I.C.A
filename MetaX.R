@@ -76,40 +76,40 @@ ui <- fluidPage(
              
                  tabPanel("Upload Data",
                           sidebarLayout(
-                            sidebarPanel(
+                            sidebarPanel( width = 3,
                               fileInput("asv", "Upload ASV Table (CSV)", accept = ".csv"),
                               fileInput("tax", "Upload Taxonomy Table (CSV)", accept = ".csv"),
                               fileInput("meta", "Upload Metadata Table (CSV)", accept = ".csv"),
                               fileInput("phylo", "Or Upload Phyloseq Object (.rds)", accept = ".rds")
                             ),
-                            mainPanel(verbatimTextOutput("upload_status"))
+                            mainPanel(width = 9,verbatimTextOutput("upload_status"))
                           )
                  ),
                  tabPanel("Filter",
                           sidebarLayout(
-                            sidebarPanel(
+                            sidebarPanel(width = 3,
                               checkboxInput("skip_filter", "Skip Filtering"),
                               checkboxInput("doRarefy", "Apply rarefaction", value = FALSE),
                               uiOutput("taxa_filters"),
                               actionButton("apply_filter", "Apply Filtering"),
                               actionButton("go_analysis", "Go to Analysis")
                             ),
-                            mainPanel(verbatimTextOutput("filter_status"))
+                            mainPanel(width = 9,verbatimTextOutput("filter_status"))
                           )
                  ),
                  tabPanel("Rarefaction Plot",
                           sidebarLayout(
-                            sidebarPanel(
+                            sidebarPanel(width = 3,
                               uiOutput("rarefaction_color_selector"),
                               uiOutput("rarefaction_facet_selector"),
                               sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12)
                             ),
-                            mainPanel(plotOutput("rarefactionPlot",height = "1000px", width = "100%"))
+                            mainPanel(width = 9,plotOutput("rarefactionPlot",height = "770px", width = "100%"))
                           )
                  ),
              tabPanel("Abundance",
                       sidebarLayout(
-                        sidebarPanel(
+                        sidebarPanel(width = 3,
                           radioButtons("abund_plot_type", "Plot Type:",
                                        choices = c("Bar" = "bar", "Line" = "line", "Heatmap" = "heat"),
                                        selected = "bar"),
@@ -130,12 +130,12 @@ ui <- fluidPage(
                           sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12),
                           checkboxInput("flip_abundance", "Flip axes (horizontal plot)", value = FALSE)
                         ),
-                        mainPanel(plotOutput("abundancePlot", height = "1000px", width = "100%"))
+                        mainPanel(width = 9,plotOutput("abundancePlot", height = "770px", width = "100%"))
                       )
                  ),
                  tabPanel("Dendrogram",
                           sidebarLayout(
-                            sidebarPanel(
+                            sidebarPanel(width = 3,
                               uiOutput("dend_treatment_selector"),
                               selectInput("dend_method", "Select distance method:",
                                           choices = c("euclidian", "manhattan", "canberra", "clark", "bray",
@@ -145,11 +145,11 @@ ui <- fluidPage(
                               sliderInput("dend_label_size", "Label size:", min = 3, max = 10, value = 5, step = 1)
                             ),
 
-                            mainPanel(plotOutput("dendrogramPlot", height = "950px", width = "100%")))
+                            mainPanel(width = 9,plotOutput("dendrogramPlot", height = "770px", width = "100%")))
                           ),
                  tabPanel("Alpha Diversity",
                           sidebarLayout(
-                            sidebarPanel(
+                            sidebarPanel(width = 3,
                               checkboxGroupInput("alpha_index", "Select Diversity Index:",
                                                  choices = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"),
                                                  selected = c("Shannon")),
@@ -159,18 +159,18 @@ ui <- fluidPage(
                               textInput("alpha_order", "Custom order (comma-separated values)", value = ""),
                               sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12)
                             ),
-                            mainPanel(plotOutput("alphaPlot",height = "950px", width = "100%"))
+                            mainPanel(width = 9,plotOutput("alphaPlot",height = "770px", width = "100%"))
                           )
                  ),
              tabPanel("Beta Diversity",
                       sidebarLayout(
-                        sidebarPanel(
+                        sidebarPanel(width = 3,
                           selectInput("beta_dist", "Distance Method:",
                                       choices = c("bray", "unifrac", "wunifrac", "jaccard", "dpcoa", "jsd", "manhattan",
                                                   "euclidean", "canberra", "binomial"),
                                       selected = "bray"),
                           selectInput("beta_ord", "Ordination Method:",
-                                      choices = c("NMDS", "MDS", "PCoA", "DCA", "CCA", "RDA", "CAP", "DPCoA"),
+                                      choices = c("NMDS", "MDS", "PCoA", "DCA", "CCA", "RDA", "DPCoA"),
                                       selected = "NMDS"),
                           uiOutput("beta_color_selector"),
                           uiOutput("beta_shape_selector"),
@@ -192,9 +192,15 @@ ui <- fluidPage(
                           uiOutput("tsne_label_selector"),
                           actionButton("run_tsne", "Run tSNE")
                         ),
-                        mainPanel(
-                          plotOutput("betaPlot", height = "950px", width = "100%"),
-                          plotOutput("tsne_plot", height = "950px", width = "100%")
+                        mainPanel(width = 9,
+                                  conditionalPanel(
+                                    condition = "!output.show_tsne_flag",
+                                    plotOutput("betaPlot", height = "770px", width = "100%")
+                                  ),
+                                  conditionalPanel(
+                                    condition = "output.show_tsne_flag",
+                                    plotOutput("tsne_plot", height = "770px", width = "100%")
+                                  )
                         
                         )
                       )
@@ -239,7 +245,7 @@ ui <- fluidPage(
                         ),
                         column(
                           width = 9,
-                          plotOutput("regression_plot", height = "900px")
+                          plotOutput("regression_plot", height = "770px")
                         )
                       )
              )
@@ -256,6 +262,7 @@ server <- function(input, output, session) {
   ordering_rules <- reactiveValues()
   reactiveValues_envfit <- reactiveValues(transenv = NULL)
   selected_analysis <- reactiveVal(NULL)
+  show_tsne <- reactiveVal(FALSE)
   
   observeEvent(input$run_rda, {
     selected_analysis("rda")
@@ -268,6 +275,16 @@ server <- function(input, output, session) {
   observeEvent(input$run_mantel, {
     selected_analysis("mantel")
   })
+  
+  observeEvent(input$run_tsne, {
+    show_tsne(TRUE)
+  })
+  
+  output$show_tsne_flag <- reactive({
+    show_tsne()
+  })
+  outputOptions(output, "show_tsne_flag", suspendWhenHidden = FALSE)
+  
   
 
   
@@ -287,12 +304,6 @@ server <- function(input, output, session) {
     }
   })
   
-  log_message <- function(message) {
-    timestamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-    cat(paste0("[", timestamp, "] ", message, "\n"), 
-        file = "metax_log.txt", 
-        append = TRUE)
-  }
 
   
   output$upload_status <- renderPrint({
@@ -437,11 +448,15 @@ server <- function(input, output, session) {
         use_alluvium = TRUE,
         clustering = TRUE,
         xtext_angle = 90,
+        xtext_size = input$beta_label_size,
         color_values = RColorBrewer::brewer.pal(8, "Set2")
       )
     } else if (input$abund_plot_type == "heat") {
       p4 <- t1$plot_heatmap(
-        xtext_keep = FALSE,
+        xtext_keep = TRUE,
+        xtext_angle = 90,
+        xtext_size = input$beta_label_size,
+        ytext_size = input$beta_label_size,
         withmargin = FALSE,
         plot_breaks = c(0.01, 0.1, 1, 10)
       )
@@ -449,6 +464,7 @@ server <- function(input, output, session) {
       p4 <- t1$plot_bar(
         others_color = "grey70",
         xtext_angle = 90,
+        xtext_size = input$beta_label_size,
         legend_text_italic = FALSE
       )
     }
@@ -793,7 +809,7 @@ server <- function(input, output, session) {
           selectInput("p_type", "P-value Adjustment Type", choices = c("All", "Taxa", "Env"), selected = "All"),
           selectInput("group_by", "Group By", choices = c("None", names(sample_meta)), selected = "None"),
           sliderInput("Cortext_size", "Text Size", value = 10, min = 7, max = 20, step = 2),
-          sliderInput("xtextangle", "Text angle",  value = 0,min=0,max = 180, step = 30)
+          sliderInput("xtextangle", "Text angle",  value = 0,min=0,max = 90, step = 10)
         )
       ),
       conditionalPanel(
