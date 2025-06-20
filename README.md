@@ -1,4 +1,4 @@
-# 📊 MetaX: Interactive Microbial Community Analysis in Shiny
+# MetaX: Interactive Microbial Community Analysis in Shiny
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![R Shiny](https://img.shields.io/badge/built%20with-R%20Shiny-blue)](https://shiny.rstudio.com/)
