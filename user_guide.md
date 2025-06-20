@@ -18,7 +18,7 @@ a.  **CSV Files**:
 b.  **`phyloseq` Object** (`.rds`): A ready-to-use object containing all necessary components.  
 
 
-> ⚠️ *To use phylogeny-based tools, your `phyloseq` object must include a phylogenetic tree.* You can create it using reference sequences and merge it with your ASV, taxonomy, and metadata.
+> ⚠️ *To use phylogeny-based tools, your `phyloseq` object must include a phylogenetic tree.* Follow [this guide](https://github.com/shanptom/metaX/blob/main/Phyloseq.md) to create `phyloseq` object from csv and to construct phylogenetic trees.
 
 ---
 

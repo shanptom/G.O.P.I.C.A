@@ -24,7 +24,7 @@ ui <- fluidPage(
   tags$head(
     tags$link(rel = "icon", type = "image/png", href = "favicon.png")
   ),
-  navbarPage("MetaX",
+  navbarPage("MetaPix",
                  id = "main_nav",
                  theme = bs_theme(
                    bootswatch = "morph", # https://bootswatch.com/
@@ -33,34 +33,44 @@ ui <- fluidPage(
                  ),
              tabPanel("Home",
                       fluidRow(
-                        column(10, offset = 1,
-                               h2("Welcome to MetaX"),
-                               p("This application allows you to explore microbial community data using various visualizations and analyses."),
-                               tags$ul(
-                                 tags$li("💾 Start by uploading your ASV, taxonomy, and metadata tables (.csv) or phyloseq object (.rds) under 'Upload Data'."),
-                                 tags$li("🧪 Remove unwanted taxa and rarefy at the filtering tab."),
-                                 tags$li("📈 Explore abundance, diversity, and dendrograms in the respective tabs."),
-                                 tags$li("🎯 Customize plots with the sidebar controls."),
-                                 tags$li("🧬 All plots support dynamic interaction based on your metadata."),
-                                 tags$li("👨‍💻 No coding experience required — just upload your files and explore!")
-                               ),
-                               br(),
-
-                               h3("Contact"),
-                               p("For questions, contact the ",
-                                 tags$a(href = "https://shanptom.github.io", target = "_blank", "developer."),
-                               ),
-                               
-                               h3("References"),
-                               p("This application was built using the following R packages: ",
-                                 strong("shiny"), ", ",
-                                 strong("phyloseq"), ", ",
-                                 strong("microeco"), ", ",
-                                 strong("phylosmith"), ", ",
-                                 strong("vegan"), ", ",
-                                 strong("ggplot2"), ", ",
-                                 strong("RColorBrewer"), ", and ",
-                                 strong("bslib"), ".")
+                        # Column for Logo (left side)
+                        column(
+                          width = 2,
+                          div(style = "padding-top: 30px; text-align: center;",
+                              img(src = "logo.png", height = "120px", style = "max-width: 100%;")
+                          )
+                        ),
+                        
+                        # Column for Text (right side)
+                        column(
+                          width = 10,
+                          h2("Welcome to MetaPix"),
+                          p("This application allows you to explore microbial community data using various visualizations and analyses."),
+                          tags$ul(
+                            tags$li("💾 Start by uploading your ASV, taxonomy, and metadata tables (.csv) or phyloseq object (.rds) under 'Upload Data'."),
+                            tags$li("🧪 Remove unwanted taxa and rarefy at the filtering tab."),
+                            tags$li("📈 Explore abundance, diversity, and dendrograms in the respective tabs."),
+                            tags$li("🎯 Customize plots with the sidebar controls."),
+                            tags$li("🧬 All plots support dynamic interaction based on your metadata."),
+                            tags$li("👨‍💻 No coding experience required — just upload your files and explore!")
+                          ),
+                          br(),
+                          
+                          h3("Contact"),
+                          p("For questions, contact the ",
+                            tags$a(href = "https://shanptom.github.io", target = "_blank", "developer.")
+                          ),
+                          
+                          h3("References"),
+                          p("This application was built using the following R packages: ",
+                            strong("shiny"), ", ",
+                            strong("phyloseq"), ", ",
+                            strong("microeco"), ", ",
+                            strong("phylosmith"), ", ",
+                            strong("vegan"), ", ",
+                            strong("ggplot2"), ", ",
+                            strong("RColorBrewer"), ", and ",
+                            strong("bslib"), ".")
                         )
                       )
              ),
@@ -160,7 +170,7 @@ ui <- fluidPage(
                         
                         mainPanel(width = 9,plotOutput("dendrogramPlot", height = "770px", width = "100%")))
              ),
-             tabPanel("Beta Diversity",
+             tabPanel("Ordination",
                       sidebarLayout(
                         sidebarPanel(width = 3,
                           selectInput("beta_dist", "Distance Method:",
@@ -407,7 +417,7 @@ server <- function(input, output, session) {
       showNotification("Some samples have 0 counts. Rarefaction plot may not work.", type = "error")
       return(NULL)
     }
-    p <- ggrare(ps, step = 1000, color = input$rare_color, label = "Sample", se = FALSE) + theme_minimal()
+    p <- ggrare(ps, step = 100, color = input$rare_color, label = "Sample", se = FALSE) + theme_minimal()
     if (!is.null(input$rare_facet) && input$rare_facet != "None") {
       p <- p + facet_wrap(as.formula(paste("~", input$rare_facet)))
     }
@@ -415,8 +425,7 @@ server <- function(input, output, session) {
       theme(
         axis.text = element_text(size = input$beta_label_size),
         axis.title = element_text(size = input$beta_label_size),
-        legend.text = element_text(size = input$beta_label_size),
-        legend.title = element_text(size = input$beta_label_size)
+        legend.position = "none"
       )
   })
   
