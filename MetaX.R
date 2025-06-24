@@ -129,7 +129,7 @@ ui <- fluidPage(
                           div(
                             style = "display: flex; align-items: center;",
                             tags$label(
-                              "Custom Order (comma-separated):",
+                              "Custom Order (comma-separated) ℹ️:",
                               `title` = "Specify sample names in the order you want them to appear on the plot. Example: Sample3, Sample2, Sample1"
                             ),
                 
@@ -152,7 +152,7 @@ ui <- fluidPage(
                               uiOutput("alpha_group_selector"),
                               uiOutput("alpha_colour_selector"),
                               checkboxInput("flip_alpha", "Flip axes (horizontal plot)", value = FALSE),
-                              textInput("alpha_order", "Custom order (comma-separated values)", value = ""),
+                              textInput("alpha_order", "Custom order (comma-separated values) ", value = ""),
                               sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12)
                             ),
                             mainPanel(width = 9,plotOutput("alphaPlot",height = "770px", width = "100%"))

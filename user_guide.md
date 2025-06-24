@@ -1,4 +1,4 @@
-# 🧬 MetaPiX User Guide
+# User Guide
 
 **MetaPiX** is an interactive Shiny app for exploring microbiome data through visual analytics and statistical tools. This guide walks you through each major feature and explains the expected input formats.
 
