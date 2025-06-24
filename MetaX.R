@@ -89,7 +89,8 @@ ui <- fluidPage(
                               fileInput("meta", "Upload Metadata Table (CSV)", accept = ".csv"),
                               fileInput("phylo", "Or Upload Phyloseq Object (.rds)", accept = ".rds")
                             ),
-                            mainPanel(width = 9,verbatimTextOutput("upload_status"))
+                            mainPanel(width = 9,verbatimTextOutput("upload_status"),
+                                      )
                           )
                  ),
                  tabPanel("Filter",
@@ -332,7 +333,7 @@ server <- function(input, output, session) {
       }
       ordering_rules$Sample <- sample_names(phy)
       
-      show_tsne(FALSE)
+      
       cat("RDS file uploaded successfully")
       updateNavbarPage(session, "main_nav", selected = "Filter")
       
@@ -355,7 +356,7 @@ server <- function(input, output, session) {
       }
       ordering_rules$Sample <- sample_names(ps)
       
-      show_tsne(FALSE)
+      
       cat("CSV files uploaded successfully")
       updateNavbarPage(session, "main_nav", selected = "Filter")
       
