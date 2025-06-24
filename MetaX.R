@@ -97,6 +97,7 @@ ui <- fluidPage(
                             sidebarPanel(width = 3,
                               checkboxInput("skip_filter", "Skip Filtering"),
                               checkboxInput("doRarefy", "Apply rarefaction", value = FALSE),
+                              checkboxInput("doTSS", "Normalize by TSS", value = FALSE),
                               uiOutput("taxa_filters"),
                               actionButton("apply_filter", "Apply Filtering"),
                               actionButton("go_analysis", "Go to Analysis")
@@ -198,7 +199,12 @@ ui <- fluidPage(
                           uiOutput("tsne_perplexity_selector"),
                           checkboxInput("tsne_circle", "Draw circles", value = FALSE),
                           uiOutput("tsne_label_selector"),
-                          actionButton("run_tsne", "Run tSNE")
+                          actionButton("run_tsne", "Run tSNE"),
+                          conditionalPanel(
+                            condition = "output.show_tsne_flag",
+                            actionButton("reset_tsne", "Back to Ordination")
+                          )
+                          
                         ),
                         mainPanel(width = 9,
                                   conditionalPanel(
@@ -316,15 +322,48 @@ server <- function(input, output, session) {
   
   output$upload_status <- renderPrint({
     if (!is.null(input$phylo)) {
+      phy <- readRDS(input$phylo$datapath)
+      final_physeq(phy)
+      
+      # Reset ordering rules
+      df <- as.data.frame(sample_data(phy))
+      for (var in colnames(df)) {
+        if (is.character(df[[var]]) || is.factor(df[[var]])) ordering_rules[[var]] <- unique(df[[var]])
+      }
+      ordering_rules$Sample <- sample_names(phy)
+      
+      show_tsne(FALSE)
       cat("RDS file uploaded successfully")
-      updateNavbarPage(session, "main_nav", selected = "Filtering")
+      updateNavbarPage(session, "main_nav", selected = "Filter")
+      
     } else if (!is.null(input$asv) && !is.null(input$tax) && !is.null(input$meta)) {
+      otu <- read.csv(input$asv$datapath, row.names = 1)
+      tax <- as.matrix(read.csv(input$tax$datapath, row.names = 1))
+      meta <- read.csv(input$meta$datapath, row.names = 1)
+      
+      ps <- phyloseq(
+        otu_table(as.matrix(otu), taxa_are_rows = TRUE),
+        tax_table(tax),
+        sample_data(meta)
+      )
+      final_physeq(ps)
+      
+      # Reset ordering rules
+      df <- as.data.frame(sample_data(ps))
+      for (var in colnames(df)) {
+        if (is.character(df[[var]]) || is.factor(df[[var]])) ordering_rules[[var]] <- unique(df[[var]])
+      }
+      ordering_rules$Sample <- sample_names(ps)
+      
+      show_tsne(FALSE)
       cat("CSV files uploaded successfully")
-      updateNavbarPage(session, "main_nav", selected = "Filtering")
+      updateNavbarPage(session, "main_nav", selected = "Filter")
+      
     } else {
       cat("Waiting for file uploads...")
     }
   })
+  
   
   output$taxa_filters <- renderUI({
     req(raw_physeq())
@@ -373,16 +412,34 @@ server <- function(input, output, session) {
   
   observeEvent(input$go_analysis, {
     req(final_physeq())
+    ps <- final_physeq()
+    
     if (input$doRarefy) {
-      ps <- rarefy_even_depth(final_physeq(),
-                              sample.size = min(sample_sums(final_physeq())),
+      ps <- rarefy_even_depth(ps,
+                              sample.size = min(sample_sums(ps)),
                               rngseed = 123, replace = TRUE,
                               trimOTUs = TRUE, verbose = FALSE
       )
-      final_physeq(ps)
+    } else if (input$doTSS) {
+      ps <- transform_sample_counts(ps, function(x) x / sum(x))
     }
+    
+    final_physeq(ps)
     updateNavbarPage(session, "main_nav", selected = "Rarefaction Plot")
   })
+  
+  observeEvent(input$doRarefy, {
+    if (input$doRarefy && input$doTSS) {
+      updateCheckboxInput(session, "doTSS", value = FALSE)
+    }
+  })
+  
+  observeEvent(input$doTSS, {
+    if (input$doTSS && input$doRarefy) {
+      updateCheckboxInput(session, "doRarefy", value = FALSE)
+    }
+  })
+  
   
   output$filter_status <- renderPrint({
     req(final_physeq())
@@ -735,7 +792,7 @@ server <- function(input, output, session) {
     max_perplexity <- max(5, min(max_perplexity, 50))  # reasonable bounds
     
     sliderInput("tsne_perplexity", "Perplexity:",
-                min = 5, max = max_perplexity, value = min(10, max_perplexity))
+                min = 0, max = max_perplexity, value = min(10, max_perplexity))
   })
   
   output$tsne_label_selector <- renderUI({
@@ -757,6 +814,10 @@ server <- function(input, output, session) {
       labels = if (input$tsne_label != "None") input$tsne_label else NULL,
       colors = "default"
     )
+  })
+  
+  observeEvent(input$reset_tsne, {
+    show_tsne(FALSE)
   })
   
   observeEvent(input$create_transenv, {
