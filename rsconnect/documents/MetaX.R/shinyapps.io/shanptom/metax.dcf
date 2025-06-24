@@ -1,10 +1,13 @@
 name: metax
-title:
+title: metaX
 username: shanptom
 account: shanptom
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 14932651
-bundleId: 10452761
+bundleId: 10486169
 url: https://shanptom.shinyapps.io/metax/
 version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .RData|Demo.rds|dna.png|LICENSE|metax_log.txt|MetaXDemo.rds|README.md

@@ -1,6 +1,6 @@
-# 🧬 MetaX User Guide
+# 🧬 MetaPiX User Guide
 
-**MetaX** is an interactive Shiny app for exploring microbiome data through visual analytics and statistical tools. This guide walks you through each major feature and explains the expected input formats.
+**MetaPiX** is an interactive Shiny app for exploring microbiome data through visual analytics and statistical tools. This guide walks you through each major feature and explains the expected input formats.
 
 ---
 
