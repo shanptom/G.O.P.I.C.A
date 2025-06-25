@@ -1,5 +1,3 @@
-
-
 library(shiny)
 library(shinyBS)
 library(shinyjs)
@@ -17,7 +15,7 @@ library(RColorBrewer)
 library(ggalluvial)
 library(dplyr)
 library(ggcor)
-
+library(ggpubr)
 
 ui <- fluidPage(
   useShinyjs(),
@@ -31,7 +29,7 @@ ui <- fluidPage(
                    primary = "#006699",
                    base_font = font_google("Inter")
                  ),
-             tabPanel("Home",
+                 tabPanel("Home",
                       fluidRow(
                         # Column for Logo (left side)
                         column(
@@ -74,7 +72,7 @@ ui <- fluidPage(
                         )
                       )
              ),
-             tabPanel("User Guide",
+                tabPanel("User Guide",
                       fluidRow(
                         column(10, offset = 1,
                                includeMarkdown("user_guide.md")
@@ -84,7 +82,7 @@ ui <- fluidPage(
                  tabPanel("Upload Data",
                           sidebarLayout(
                             sidebarPanel( width = 3,
-                              fileInput("asv", "Upload ASV Table (CSV)", accept = ".csv"),
+                              fileInput("asv", "Upload Count Table (CSV)", accept = ".csv"),
                               fileInput("tax", "Upload Taxonomy Table (CSV)", accept = ".csv"),
                               fileInput("meta", "Upload Metadata Table (CSV)", accept = ".csv"),
                               fileInput("phylo", "Or Upload Phyloseq Object (.rds)", accept = ".rds")
@@ -116,7 +114,7 @@ ui <- fluidPage(
                             mainPanel(width = 9,plotOutput("rarefactionPlot",height = "770px", width = "100%"))
                           )
                  ),
-             tabPanel("Abundance",
+                 tabPanel("Abundance",
                       sidebarLayout(
                         sidebarPanel(width = 3,
                           radioButtons("abund_plot_type", "Plot Type:",
@@ -158,7 +156,7 @@ ui <- fluidPage(
                             mainPanel(width = 9,plotOutput("alphaPlot",height = "770px", width = "100%"))
                           )
                  ),
-             tabPanel("Dendrogram",
+                   tabPanel("Dendrogram",
                       sidebarLayout(
                         sidebarPanel(width = 3,
                                      uiOutput("dend_treatment_selector"),
@@ -172,7 +170,7 @@ ui <- fluidPage(
                         
                         mainPanel(width = 9,plotOutput("dendrogramPlot", height = "770px", width = "100%")))
              ),
-             tabPanel("Ordination",
+                tabPanel("Ordination",
                       sidebarLayout(
                         sidebarPanel(width = 3,
                           selectInput("beta_dist", "Distance Method:",
@@ -220,8 +218,6 @@ ui <- fluidPage(
                         )
                       )
              ),
-             
-
              tabPanel("Metadata Analysis",
                       fluidRow(
                         column(
@@ -267,10 +263,7 @@ ui <- fluidPage(
              
              
   ))
-
-             
-             
-             
+            
              
 server <- function(input, output, session) {
   final_physeq <- reactiveVal()
@@ -1107,9 +1100,6 @@ server <- function(input, output, session) {
     
     print(p)
   })
-  
-  
-  
   
 }
 

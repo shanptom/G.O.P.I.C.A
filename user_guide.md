@@ -120,5 +120,32 @@ Steps:
 * A set of demo files are also available on Github for reference 
 
 ---
+## Running MetaPiX Locally
 
- You can return to this tab anytime for guidance.
+To run MetaPiX locally, follow these steps:
+
+
+### Get MetaPix repo from GiHub
+
+You can download the MetaPiX repository from GitHub using the following command. Make sure to replace `~/Path/to/your/folder` with the actual path where you want to clone the repository.
+```
+git clone https://github.com/shanptom/MetaPiX.git ~/Path/to/your/folder
+```
+When you run the app for first time open the MetaPiX.R file and install all the necessary packages
+
+If you are using a HPC cluster, you can use the following commands to load the necessary modules and run the app:(The below commands are for the HPC cluster at the Ohio Supercomputer Center, please modify them according to your HPC cluster)
+
+```bash
+ml gcc/12.3.0
+ml R/4.4.0
+ml gdal/3.7.3
+ml proj/9.2.1
+ml geos/3.12.0
+R
+```
+If you are using a local machine, you can run the app directly in RStudio or R console and can ignore the module loading commands above.
+
+```r
+library(shiny)
+runApp('/Path/to/MetaPiX.R')
+```

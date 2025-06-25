@@ -5,9 +5,9 @@ account: shanptom
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 14972637
-bundleId: 10518176
+bundleId: 10518388
 url: https://shanptom.shinyapps.io/MetaPiX/
 version: 1
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: .RData|Demo.rds|LICENSE|MetaXDemo.rds|Phyloseq.md|README.md
+ignoredFiles: .RData|Demo.rds|LICENSE|MetaXDemo.rds|Phyloseq.md|README.md|www/demo/demo_asv.csv|www/demo/demo_meta.csv|www/demo/demo_tax.csv
