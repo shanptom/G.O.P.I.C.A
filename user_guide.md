@@ -112,8 +112,12 @@ Steps:
 ##  Tips
 
 * Hover over inputs for helpful tooltips
-* Use comma-separated values for manual ordering of samples.
+* Use comma-separated values for manual ordering of samples
 * All plots dynamically update based on your selections
+* For Large Files: The Shiny app may become slow or unresponsive. To improve performance, run the app locally by following these steps:
+    1. Download or clone the repository from [GitHub](https://github.com/shanptom/metaX).
+    2. Open the MetaPiX.R file in RStudio and run the app
+* A set of demo files are also available on Github for reference 
 
 ---
 

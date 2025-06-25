@@ -129,7 +129,7 @@ ui <- fluidPage(
                           div(
                             style = "display: flex; align-items: center;",
                             tags$label(
-                              "Custom Order (comma-separated) ℹ️:",
+                              "Custom Order (comma-separated) ℹ ",
                               `title` = "Specify sample names in the order you want them to appear on the plot. Example: Sample3, Sample2, Sample1"
                             ),
                 
