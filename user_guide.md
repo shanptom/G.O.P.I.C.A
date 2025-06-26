@@ -1,6 +1,6 @@
 # User Guide
 
-**MetaPiX** is an interactive Shiny app for exploring microbiome data through visual analytics and statistical tools. This guide walks you through each major feature and explains the expected input formats.
+**`MetaPiX`** is an interactive Shiny app for exploring microbiome data through visual analytics and statistical tools. This guide walks you through each major feature and explains the expected input formats.
 
 ---
 
@@ -10,8 +10,8 @@ You can upload your data in one of two ways:
 
 a.  **CSV Files**:
 
-  * **ASV Table**: Rows = ASVs, Columns = Samples
-  * **Taxonomy Table**: Rows = ASVs, Columns = Taxonomic ranks
+  * **Count Table**: Rows = ASVs (Taxa), Columns = Samples
+  * **Taxonomy Table**: Rows = ASVs(Taxa), Columns = Taxonomic ranks
   * **Metadata Table**: Rows = Samples  
     
 
@@ -120,18 +120,23 @@ Steps:
 * A set of demo files are also available on Github for reference 
 
 ---
-## Running MetaPiX Locally
+## Running `MetaPiX` Locally
 
 To run MetaPiX locally, follow these steps:
 
 
-### Get MetaPix repo from GiHub
+### Get `MetaPix` repo from GiHub
 
 You can download the MetaPiX repository from GitHub using the following command. Make sure to replace `~/Path/to/your/folder` with the actual path where you want to clone the repository.
-```
+
+```bash
 git clone https://github.com/shanptom/MetaPiX.git ~/Path/to/your/folder
 ```
-When you run the app for first time open the MetaPiX.R file and install all the necessary packages
+When you run the app for the first time, you need to install the required packages. You can do this by running the following command in R:
+
+```r
+source("Path/to/install_dep.R") 
+```
 
 If you are using a HPC cluster, you can use the following commands to load the necessary modules and run the app:(The below commands are for the HPC cluster at the Ohio Supercomputer Center, please modify them according to your HPC cluster)
 
