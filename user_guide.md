@@ -120,12 +120,12 @@ Steps:
 * A set of demo files are also available on Github for reference 
 
 ---
-## Running `MetaPiX` Locally
+## Running `MetaPiX` locally
 
 To run MetaPiX locally, follow these steps:
 
 
-### Get `MetaPix` repo from GiHub
+#### Get `MetaPix` repo from GiHub
 
 You can download the MetaPiX repository from GitHub using the following command. Make sure to replace `~/Path/to/your/folder` with the actual path where you want to clone the repository.
 

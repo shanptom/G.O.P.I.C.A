@@ -4,10 +4,10 @@ username: shanptom
 account: shanptom
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
-appId: 14972637
-bundleId: 10518388
+appId: 15002087
+bundleId: 10530255
 url: https://shanptom.shinyapps.io/MetaPiX/
 version: 1
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: .RData|Demo.rds|LICENSE|MetaXDemo.rds|Phyloseq.md|README.md|www/demo/demo_asv.csv|www/demo/demo_meta.csv|www/demo/demo_tax.csv
+ignoredFiles: .RData|demo/demo-phyloseq.rds|demo/demo_asv.csv|demo/demo_meta.csv|demo/demo_tax.csv|Demo.rds|ggplot-demo-iris.png|install_dep.R|LICENSE|MetaXDemo.rds|Phyloseq.md|raw/app.R|raw/helpers.R|raw/server.R|raw/ui.R|README.md

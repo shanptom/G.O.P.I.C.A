@@ -17,253 +17,9 @@ library(dplyr)
 library(ggcor)
 library(ggpubr)
 
-ui <- fluidPage(
-  useShinyjs(),
-  tags$head(
-    tags$link(rel = "icon", type = "image/png", href = "favicon.png")
-  ),
-  navbarPage("MetaPix",
-                 id = "main_nav",
-                 theme = bs_theme(
-                   bootswatch = "morph", # https://bootswatch.com/
-                   primary = "#006699",
-                   base_font = font_google("Inter")
-                 ),
-                 tabPanel("Home",
-                      fluidRow(
-                        # Column for Logo (left side)
-                        column(
-                          width = 2,
-                          div(style = "padding-top: 30px; text-align: center;",
-                              img(src = "logo.png", height = "120px", style = "max-width: 100%;")
-                          )
-                        ),
-                        # Column for Text (right side)
-                        column(
-                          width = 10,
-                          h2("Welcome to MetaPix"),
-                          p("This application allows you to explore microbial community data using various visualizations and analyses."),
-                          tags$ul(
-                            tags$li("💾 Start by uploading your ASV, taxonomy, and metadata tables (.csv) or phyloseq object (.rds) under 'Upload Data'."),
-                            tags$li("🧪 Remove unwanted taxa and rarefy at the filtering tab."),
-                            tags$li("📈 Explore abundance, diversity, and dendrograms in the respective tabs."),
-                            tags$li("🎯 Customize plots with the sidebar controls."),
-                            tags$li("🧬 All plots support dynamic interaction based on your metadata."),
-                            tags$li("👨‍💻 No coding experience required — just upload your files and explore!")
-                          ),
-                          br(),
-                          
-                          h3("Contact"),
-                          p("For questions, contact the ",
-                            tags$a(href = "https://shanptom.github.io", target = "_blank", "developer.")
-                          ),
-                          
-                          h3("References"),
-                          p("This application was built using the following R packages: ",
-                            strong("shiny"), ", ",
-                            strong("phyloseq"), ", ",
-                            strong("microeco"), ", ",
-                            strong("phylosmith"), ", ",
-                            strong("vegan"), ", ",
-                            strong("ggplot2"), ", ",
-                            strong("RColorBrewer"), ", and ",
-                            strong("bslib"), ".")
-                        )
-                      )
-             ),
-                tabPanel("User Guide",
-                      fluidRow(
-                        column(10, offset = 1,
-                               includeMarkdown("user_guide.md")
-                        )
-                      )
-             ),
-                 tabPanel("Upload Data",
-                          sidebarLayout(
-                            sidebarPanel( width = 3,
-                              fileInput("asv", "Upload Count Table (CSV)", accept = ".csv"),
-                              fileInput("tax", "Upload Taxonomy Table (CSV)", accept = ".csv"),
-                              fileInput("meta", "Upload Metadata Table (CSV)", accept = ".csv"),
-                              fileInput("phylo", "Or Upload Phyloseq Object (.rds)", accept = ".rds")
-                            ),
-                            mainPanel(width = 9,verbatimTextOutput("upload_status"),
-                                      )
-                          )
-                 ),
-                 tabPanel("Filter",
-                          sidebarLayout(
-                            sidebarPanel(width = 3,
-                              checkboxInput("skip_filter", "Skip Filtering"),
-                              checkboxInput("doRarefy", "Apply rarefaction", value = FALSE),
-                              checkboxInput("doTSS", "Normalize by TSS", value = FALSE),
-                              uiOutput("taxa_filters"),
-                              actionButton("apply_filter", "Apply Filtering"),
-                              actionButton("go_analysis", "Go to Analysis")
-                            ),
-                            mainPanel(width = 9,verbatimTextOutput("filter_status"))
-                          )
-                 ),
-                 tabPanel("Rarefaction Plot",
-                          sidebarLayout(
-                            sidebarPanel(width = 3,
-                              uiOutput("rarefaction_color_selector"),
-                              uiOutput("rarefaction_facet_selector"),
-                              sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12)
-                            ),
-                            mainPanel(width = 9,plotOutput("rarefactionPlot",height = "770px", width = "100%"))
-                          )
-                 ),
-                 tabPanel("Abundance",
-                      sidebarLayout(
-                        sidebarPanel(width = 3,
-                          radioButtons("abund_plot_type", "Plot Type:",
-                                       choices = c("Bar" = "bar", "Line" = "line", "Heatmap" = "heat"),
-                                       selected = "bar"),
-                          uiOutput("tax_rank_selector"),
-                          sliderInput("ntaxa", "Number of Top Taxa:", min = 5, max = 15, value = 8, step = 1),
-                          uiOutput("abundance_facet_selector"),
-                          
-                          div(
-                            style = "display: flex; align-items: center;",
-                            tags$label(
-                              "Custom Order (comma-separated) ℹ ",
-                              `title` = "Specify sample names in the order you want them to appear on the plot. Example: Sample3, Sample2, Sample1"
-                            ),
-                
-                          ),
-                          textInput("abund_order", label = NULL, value = ""),
-                          
-                          sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12),
-                          checkboxInput("flip_abundance", "Flip axes (horizontal plot)", value = FALSE)
-                        ),
-                        mainPanel(width = 9,plotOutput("abundancePlot", height = "770px", width = "100%"))
-                      )
-                 ),
+# Source helper functions
+source("helpers.R")
 
-                 tabPanel("Alpha Diversity",
-                          sidebarLayout(
-                            sidebarPanel(width = 3,
-                              checkboxGroupInput("alpha_index", "Select Diversity Index:",
-                                                 choices = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"),
-                                                 selected = c("Shannon")),
-                              uiOutput("alpha_group_selector"),
-                              uiOutput("alpha_colour_selector"),
-                              checkboxInput("flip_alpha", "Flip axes (horizontal plot)", value = FALSE),
-                              textInput("alpha_order", "Custom order (comma-separated values) ", value = ""),
-                              sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12)
-                            ),
-                            mainPanel(width = 9,plotOutput("alphaPlot",height = "770px", width = "100%"))
-                          )
-                 ),
-                   tabPanel("Dendrogram",
-                      sidebarLayout(
-                        sidebarPanel(width = 3,
-                                     uiOutput("dend_treatment_selector"),
-                                     selectInput("dend_method", "Select distance method:",
-                                                 choices = c("euclidian", "manhattan", "canberra", "clark", "bray",
-                                                             "kulczynski", "jaccard", "gower", "altGower", "morisita",
-                                                             "horn", "mountford", "raup", "binomial", "chao", "cao", "mahalanobis"),
-                                                 selected = "bray"),
-                                     sliderInput("dend_label_size", "Label size:", min = 3, max = 10, value = 5, step = 1)
-                        ),
-                        
-                        mainPanel(width = 9,plotOutput("dendrogramPlot", height = "770px", width = "100%")))
-             ),
-                tabPanel("Ordination",
-                      sidebarLayout(
-                        sidebarPanel(width = 3,
-                          selectInput("beta_dist", "Distance Method:",
-                                      choices = c("bray", "unifrac", "wunifrac", "jaccard", "dpcoa", "jsd", "manhattan",
-                                                  "euclidean", "canberra", "binomial"),
-                                      selected = "bray"),
-                          selectInput("beta_ord", "Ordination Method:",
-                                      choices = c("NMDS", "MDS", "PCoA", "DCA", "CCA", "RDA", "DPCoA"),
-                                      selected = "NMDS"),
-                          uiOutput("beta_color_selector"),
-                          uiOutput("beta_shape_selector"),
-                          uiOutput("beta_label_selector"),
-                          uiOutput("beta_facet_selector"),
-                          sliderInput("beta_label_size", "Axis Text Size:", min = 6, max = 20, value = 12),
-                          sliderInput("beta_label_text_size", "Label Text Size:", min = 2, max = 15, value = 3),
-                          sliderInput("beta_shape_size", "Shape Size:", min = 1, max = 10, value = 4),
-                          tags$hr(),
-                          h4("PERMANOVA"),
-                          uiOutput("permanova_group_selector"),
-                          actionButton("run_permanova", "Run PERMANOVA"),
-                          verbatimTextOutput("permanova_result"),
-                          tags$hr(),
-                          h4("tSNE Analysis"),
-                          uiOutput("tsne_group_selector"),
-                          uiOutput("tsne_perplexity_selector"),
-                          checkboxInput("tsne_circle", "Draw circles", value = FALSE),
-                          uiOutput("tsne_label_selector"),
-                          actionButton("run_tsne", "Run tSNE"),
-                          conditionalPanel(
-                            condition = "output.show_tsne_flag",
-                            actionButton("reset_tsne", "Back to Ordination")
-                          )
-                          
-                        ),
-                        mainPanel(width = 9,
-                                  conditionalPanel(
-                                    condition = "!output.show_tsne_flag",
-                                    plotOutput("betaPlot", height = "770px", width = "100%")
-                                  ),
-                                  conditionalPanel(
-                                    condition = "output.show_tsne_flag",
-                                    plotOutput("tsne_plot", height = "770px", width = "100%")
-                                  )
-                        
-                        )
-                      )
-             ),
-             tabPanel("Metadata Analysis",
-                      fluidRow(
-                        column(
-                          width = 3,
-                          # Initial controls (trans_env creation)
-                          numericInput("colx", "Enter the column number where numerical data starts:", value = 1, min = 1),
-                          numericInput("coly", "Enter the column number where numerical data ends:", value = 1, min = 1),
-                          actionButton("create_transenv", "Create trans_env Object"),
-                          br(), br(),
-                          verbatimTextOutput("transenv_display"),
-                          uiOutput("continue_button_ui"),
-                          
-                          # Collapsible RDA controls (only visible after "Continue")
-                          uiOutput("visualization_sidebar")
-                        ),
-                        column(
-                          width = 9,
-                          uiOutput("visualization_main")  # RDA plot output
-                        )
-                      )
-                      
-             ),
-             tabPanel("Regression",
-                      fluidRow(
-                        column(
-                          width = 3,
-                          uiOutput("tax_rank_selector_regression"),
-                          uiOutput("taxa_selector_regression"),
-                          selectInput("env_var", "Select Environmental Variable:",
-                                      choices = NULL),
-                          uiOutput("regression_group_selector"),
-                          actionButton("run_scatter", "Run Scatter Plot"),
-                          sliderInput("point_alpha", "Point Alpha:", min = 0.1, max = 1, value = 0.5, step = 0.1),
-                          sliderInput("point_size", "Point Size:", min = 1, max = 6, value = 3),
-                          
-                        ),
-                        column(
-                          width = 9,
-                          plotOutput("regression_plot", height = "770px")
-                        )
-                      )
-             )
-             
-             
-  ))
-            
-             
 server <- function(input, output, session) {
   final_physeq <- reactiveVal()
   ordering_rules <- reactiveValues()
@@ -451,13 +207,6 @@ server <- function(input, output, session) {
     selectInput("rare_facet", "Facet by:", choices = c("None", cols), selected = "None")
   })
   
-  reorder_factor_column <- function(p, group_var, order_string) {
-    if (order_string != "" && group_var %in% colnames(p$data)) {
-      custom_order <- trimws(unlist(strsplit(order_string, ",")))
-      p$data[[group_var]] <- factor(p$data[[group_var]], levels = custom_order)
-    }
-    return(p)
-  }
   
   output$rarefactionPlot <- renderPlot({
     req(final_physeq(), input$rare_color)
@@ -471,12 +220,8 @@ server <- function(input, output, session) {
     if (!is.null(input$rare_facet) && input$rare_facet != "None") {
       p <- p + facet_wrap(as.formula(paste("~", input$rare_facet)))
     }
-    p +
-      theme(
-        axis.text = element_text(size = input$beta_label_size),
-        axis.title = element_text(size = input$beta_label_size),
-        legend.position = "none"
-      )
+    apply_plot_theme(p, axis_text_size = input$beta_label_size, axis_title_size = input$beta_label_size) +
+      theme(legend.position = "none")
   })
   
   output$tax_rank_selector <- renderUI({
@@ -551,13 +296,8 @@ server <- function(input, output, session) {
       p4 <- p4 + coord_flip()
     }
     
-    p4 +
-      theme(
-        axis.text = element_text(size = input$beta_label_size),
-        axis.title = element_text(size = input$beta_label_size),
-        legend.text = element_text(size = input$beta_label_size),
-        legend.title = element_text(size = input$beta_label_size)
-      )
+    apply_plot_theme(p4, axis_text_size = input$beta_label_size, axis_title_size = input$beta_label_size,
+                     legend_text_size = input$beta_label_size, legend_title_size = input$beta_label_size)
   })
   
   output$alpha_group_selector <- renderUI({
@@ -605,14 +345,9 @@ server <- function(input, output, session) {
       p <- p + coord_flip()
     }
     
-    p +
-      theme(
-        axis.text = element_text(size = input$beta_label_size),
-        axis.title = element_text(size = input$beta_label_size),
-        legend.text = element_text(size = input$beta_label_size),
-        legend.title = element_text(size = input$beta_label_size),
-        strip.text = element_text(size = input$beta_label_size)
-      )
+    apply_plot_theme(p, axis_text_size = input$beta_label_size, axis_title_size = input$beta_label_size,
+                     legend_text_size = input$beta_label_size, legend_title_size = input$beta_label_size,
+                     strip_text_size = input$beta_label_size)
   })
   
   output$beta_color_selector <- renderUI({
@@ -661,13 +396,9 @@ server <- function(input, output, session) {
     }
     
     # Apply theme and text size
-    p <- p + theme(
-      axis.text = element_text(size = input$beta_label_size),
-      axis.title = element_text(size = input$beta_label_size),
-      legend.text = element_text(size = input$beta_label_size),
-      legend.title = element_text(size = input$beta_label_size),
-      strip.text = element_text(size = input$beta_label_size)
-    )
+    p <- apply_plot_theme(p, axis_text_size = input$beta_label_size, axis_title_size = input$beta_label_size,
+                          legend_text_size = input$beta_label_size, legend_title_size = input$beta_label_size,
+                          strip_text_size = input$beta_label_size)
     
 
     if (!is.null(input$beta_facet) && input$beta_facet != "None") {
@@ -709,45 +440,6 @@ server <- function(input, output, session) {
     permanova_result()
   })
   
-  dendrogram_phyloseq_custom <- function(phyloseq_obj, treatment = NULL, method = "bray",
-                                         colors = "default", label_size = 2.5) {
-    dend <- phylosmith::dendrogram_phyloseq(
-      phyloseq_obj = phyloseq_obj,
-      treatment = treatment,
-      method = method,
-      colors = colors
-    )
-    
-    # Identify and replace the geom_label layer with new size
-    label_data <- NULL
-    label_mapping <- NULL
-    
-    for (layer in dend$layers) {
-      if (inherits(layer$geom, "GeomLabel") || inherits(layer$geom, "GeomText")) {
-        label_data <- layer$data
-        label_mapping <- layer$mapping
-      }
-    }
-    
-    if (!is.null(label_data)) {
-      dend$layers <- Filter(function(l) {
-        !inherits(l$geom, "GeomLabel") && !inherits(l$geom, "GeomText")
-      }, dend$layers)
-      
-      dend <- dend + 
-        ggplot2::geom_label(
-          data = label_data,
-          mapping = label_mapping,
-          size = label_size,
-          color = "white",
-          label.padding = unit(0.2, "lines"),
-          fontface = "bold",
-          hjust = 1.05
-        )
-    }
-    
-    return(dend)
-  }
   
   output$dend_treatment_selector <- renderUI({
     req(final_physeq())
@@ -859,7 +551,7 @@ server <- function(input, output, session) {
           selectInput("rda_color", "Color by:", choices = factor_vars, selected = factor_vars[1]),
           selectInput("rda_shape", "Point Shape", choices = factor_vars, selected = factor_vars[1]),
           selectInput("rda_label", "Sample Labels:", choices = c("None", names(sample_meta)), selected = "None"),
-          sliderInput("rda_textsize", "Text Size", value = 6, min = 6, max = 15, step = 1)
+          sliderInput("rda_textsize", "Text Size", value = 3, min = 3, max = 8, step = 1)
         )
       ),
       conditionalPanel(
@@ -927,16 +619,15 @@ server <- function(input, output, session) {
 
     
     
-     e1$plot_ordination(
+    rda_plot <- e1$plot_ordination(
       plot_color = input$rda_color,
       plot_shape = shape_input,
       env_text_size = input$rda_textsize,
       taxa_text_size = input$rda_textsize,
-      add_sample_label = label_input,
-      point_size = input$rda_textsize
+      add_sample_label = label_input
     )
-
- 
+    
+    print(rda_plot)
   })
   
   output$corr_plot <- renderPlot({
@@ -1009,21 +700,14 @@ server <- function(input, output, session) {
     output$mantel_plot <- renderPlot({
       req(mantel_objs[[1]])
       
-      MantCorr.Sn <- quickcor(mantel_objs[[1]]$data_env, type = "upper", cor.test = TRUE, show.diag = TRUE) +
-        geom_square() +scale_fill_distiller(palette = "RdBu", direction = 1)+
-        #geom_mark(sig.thres = 0.05, color = "black", size = 0) +
+      MantCorr.Sn <- quickcor(mantel_objs[[1]]$data_env, type = "upper", cor.test = TRUE, show.diag = FALSE) +
+        geom_square() +
         anno_link(aes(colour = pd, size = rd), data = combined_table) +
         scale_size_manual(values = c(0.5, 1.5, 3)) +
         scale_colour_manual(values = c("#D95F02", "#1B9E77", "#A2A2A288")) +
         guides(size = guide_legend(title = "Mantel's r", override.aes = list(colour = "grey35"), order = 2),
                colour = guide_legend(title = "Mantel's p", override.aes = list(size = 3), order = 1),
-               fill = guide_colorbar(title = "Pearson's r", order = 3))+
-        theme(
-          axis.text.x = element_text(size = 12, angle = 45, hjust = 1),
-          axis.text.y = element_text(size = 12),
-          legend.title = element_text(size = 12),
-          legend.text = element_text(size = 10)
-        )
+               fill = guide_colorbar(title = "Pearson's r", order = 3))
       
       MantCorr.Sn
     })
@@ -1102,11 +786,11 @@ server <- function(input, output, session) {
       label.x.npc = "left", label.y.npc = "top",
       x_axis_title = input$selected_taxon,
       y_axis_title = input$env_var
-    )  +theme_classic()
+    )
+    p <- apply_plot_theme(p, axis_text_size = input$regression_text_size, axis_title_size = input$regression_text_size,
+                          legend_text_size = input$regression_text_size, legend_title_size = input$regression_text_size)
     
     print(p)
   })
   
 }
-
-shinyApp(ui = ui, server = server)
