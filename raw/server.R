@@ -1,8 +1,3 @@
-library(shiny)
-library(shinyBS)
-library(shinyjs)
-library(shinycssloaders)
-library(bslib)
 library(phyloseq)
 library(ggplot2)
 library(vegan)
@@ -16,9 +11,7 @@ library(ggalluvial)
 library(dplyr)
 library(ggcor)
 library(ggpubr)
-
-# Source helper functions
-source("helpers.R")
+library(plotly)
 
 server <- function(input, output, session) {
   final_physeq <- reactiveVal()
@@ -26,6 +19,15 @@ server <- function(input, output, session) {
   reactiveValues_envfit <- reactiveValues(transenv = NULL)
   selected_analysis <- reactiveVal(NULL)
   show_tsne <- reactiveVal(FALSE)
+  
+  # Initially disable all analysis tabs
+  analysis_tabs <- c("filter_tab", "rarefaction_tab", "abundance_tab", "alpha_tab", "dendrogram_tab", "ordination_tab", "metadata_tab", "regression_tab")
+  
+  observe({
+    for(tab in analysis_tabs) {
+      shinyjs::disable(selector = paste0("a[data-value='", tab, "']"))
+    }
+  })
   
   observeEvent(input$run_rda, {
     selected_analysis("rda")
@@ -48,9 +50,6 @@ server <- function(input, output, session) {
   })
   outputOptions(output, "show_tsne_flag", suspendWhenHidden = FALSE)
   
-  
-
-  
   raw_physeq <- reactive({
     if (!is.null(input$phylo)) {
       readRDS(input$phylo$datapath)
@@ -67,49 +66,46 @@ server <- function(input, output, session) {
     }
   })
   
-
-  
-  output$upload_status <- renderPrint({
-    if (!is.null(input$phylo)) {
-      phy <- readRDS(input$phylo$datapath)
-      final_physeq(phy)
+  output$upload_status_ui <- renderUI({
+    if (!is.null(input$phylo) || (!is.null(input$asv) && !is.null(input$tax) && !is.null(input$meta))) {
+      # Enable analysis tabs
+      for(tab in analysis_tabs) {
+        shinyjs::enable(selector = paste0("a[data-value='", tab, "']"))
+      }
+      
+      # Show success notification
+      showNotification("Files uploaded successfully! You can now proceed to the 'Filter' tab.", type = "message", duration = 5)
+      
+      # Update the navbar to the filter tab
+      updateNavbarPage(session, "main_nav", selected = "filter_tab")
+      
+      # Process the data
+      if (!is.null(input$phylo)) {
+        phy <- readRDS(input$phylo$datapath)
+        final_physeq(phy)
+        df <- as.data.frame(sample_data(phy))
+      } else {
+        otu <- read.csv(input$asv$datapath, row.names = 1)
+        tax <- as.matrix(read.csv(input$tax$datapath, row.names = 1))
+        meta <- read.csv(input$meta$datapath, row.names = 1)
+        ps <- phyloseq(
+          otu_table(as.matrix(otu), taxa_are_rows = TRUE),
+          tax_table(tax),
+          sample_data(meta)
+        )
+        final_physeq(ps)
+        df <- as.data.frame(sample_data(ps))
+      }
       
       # Reset ordering rules
-      df <- as.data.frame(sample_data(phy))
       for (var in colnames(df)) {
         if (is.character(df[[var]]) || is.factor(df[[var]])) ordering_rules[[var]] <- unique(df[[var]])
       }
-      ordering_rules$Sample <- sample_names(phy)
+      ordering_rules$Sample <- sample_names(final_physeq())
       
-      
-      cat("RDS file uploaded successfully")
-      updateNavbarPage(session, "main_nav", selected = "Filter")
-      
-    } else if (!is.null(input$asv) && !is.null(input$tax) && !is.null(input$meta)) {
-      otu <- read.csv(input$asv$datapath, row.names = 1)
-      tax <- as.matrix(read.csv(input$tax$datapath, row.names = 1))
-      meta <- read.csv(input$meta$datapath, row.names = 1)
-      
-      ps <- phyloseq(
-        otu_table(as.matrix(otu), taxa_are_rows = TRUE),
-        tax_table(tax),
-        sample_data(meta)
-      )
-      final_physeq(ps)
-      
-      # Reset ordering rules
-      df <- as.data.frame(sample_data(ps))
-      for (var in colnames(df)) {
-        if (is.character(df[[var]]) || is.factor(df[[var]])) ordering_rules[[var]] <- unique(df[[var]])
-      }
-      ordering_rules$Sample <- sample_names(ps)
-      
-      
-      cat("CSV files uploaded successfully")
-      updateNavbarPage(session, "main_nav", selected = "Filter")
-      
+      return(h4("Upload successful. Please proceed to the next tabs."))
     } else {
-      cat("Waiting for file uploads...")
+      return(h4("Waiting for file uploads..."))
     }
   })
   
@@ -146,6 +142,8 @@ server <- function(input, output, session) {
     
     if (any(sample_sums(ps) == 0)) {
       showNotification("Warning: some samples have zero reads after filtering.", type = "warning")
+    } else {
+      showNotification("Filtering applied successfully.", type = "message")
     }
   })
   
@@ -157,6 +155,7 @@ server <- function(input, output, session) {
     }
     ordering_rules$Sample <- sample_names(ps)
     final_physeq(ps)
+    showNotification("Skipped filtering. Using raw data.", type = "message")
   })
   
   observeEvent(input$go_analysis, {
@@ -169,12 +168,14 @@ server <- function(input, output, session) {
                               rngseed = 123, replace = TRUE,
                               trimOTUs = TRUE, verbose = FALSE
       )
+      showNotification("Rarefaction applied.", type = "message")
     } else if (input$doTSS) {
       ps <- transform_sample_counts(ps, function(x) x / sum(x))
+      showNotification("TSS normalization applied.", type = "message")
     }
     
     final_physeq(ps)
-    updateNavbarPage(session, "main_nav", selected = "Rarefaction Plot")
+    updateNavbarPage(session, "main_nav", selected = "rarefaction_tab")
   })
   
   observeEvent(input$doRarefy, {
@@ -207,6 +208,13 @@ server <- function(input, output, session) {
     selectInput("rare_facet", "Facet by:", choices = c("None", cols), selected = "None")
   })
   
+  reorder_factor_column <- function(p, group_var, order_string) {
+    if (order_string != "" && group_var %in% colnames(p$data)) {
+      custom_order <- trimws(unlist(strsplit(order_string, ",")))
+      p$data[[group_var]] <- factor(p$data[[group_var]], levels = custom_order)
+    }
+    return(p)
+  }
   
   output$rarefactionPlot <- renderPlot({
     req(final_physeq(), input$rare_color)
@@ -220,8 +228,12 @@ server <- function(input, output, session) {
     if (!is.null(input$rare_facet) && input$rare_facet != "None") {
       p <- p + facet_wrap(as.formula(paste("~", input$rare_facet)))
     }
-    apply_plot_theme(p, axis_text_size = input$beta_label_size, axis_title_size = input$beta_label_size) +
-      theme(legend.position = "none")
+    p +
+      theme(
+        axis.text = element_text(size = input$beta_label_size),
+        axis.title = element_text(size = input$beta_label_size),
+        legend.position = "none"
+      )
   })
   
   output$tax_rank_selector <- renderUI({
@@ -236,7 +248,15 @@ server <- function(input, output, session) {
     selectInput("abund_facet", "Facet by:", choices = c("None", meta_cols), selected = "None")
   })
   
-  output$abundancePlot <- renderPlot({
+  output$abundance_plot_output <- renderUI({
+    if (input$abund_plot_type == "line") {
+      plotOutput("abundancePlotStatic", height = "770px", width = "100%")
+    } else {
+      plotlyOutput("abundancePlotly", height = "770px", width = "100%")
+    }
+  })
+
+  abundance_plot_obj <- reactive({
     req(final_physeq(), input$tax_rank, input$ntaxa)
     dataset <- phyloseq2meco(final_physeq())
     dataset$tidy_dataset()
@@ -296,8 +316,22 @@ server <- function(input, output, session) {
       p4 <- p4 + coord_flip()
     }
     
-    apply_plot_theme(p4, axis_text_size = input$beta_label_size, axis_title_size = input$beta_label_size,
-                     legend_text_size = input$beta_label_size, legend_title_size = input$beta_label_size)
+    p4 +
+      theme(
+        axis.text = element_text(size = input$beta_label_size),
+        axis.title = element_text(size = input$beta_label_size),
+        legend.text = element_text(size = input$beta_label_size),
+        legend.title = element_text(size = input$beta_label_size)
+      )
+  })
+
+  output$abundancePlotly <- renderPlotly({
+    p <- abundance_plot_obj()
+    ggplotly(p)
+  })
+  
+  output$abundancePlotStatic <- renderPlot({
+    abundance_plot_obj()
   })
   
   output$alpha_group_selector <- renderUI({
@@ -345,9 +379,14 @@ server <- function(input, output, session) {
       p <- p + coord_flip()
     }
     
-    apply_plot_theme(p, axis_text_size = input$beta_label_size, axis_title_size = input$beta_label_size,
-                     legend_text_size = input$beta_label_size, legend_title_size = input$beta_label_size,
-                     strip_text_size = input$beta_label_size)
+    p +
+      theme(
+        axis.text = element_text(size = input$beta_label_size),
+        axis.title = element_text(size = input$beta_label_size),
+        legend.text = element_text(size = input$beta_label_size),
+        legend.title = element_text(size = input$beta_label_size),
+        strip.text = element_text(size = input$beta_label_size)
+      )
   })
   
   output$beta_color_selector <- renderUI({
@@ -376,7 +415,7 @@ server <- function(input, output, session) {
   
   
   
-  output$betaPlot <- renderPlot({
+  output$betaPlot <- renderPlotly({
     req(final_physeq())
     
     dist <- distance(final_physeq(), method = input$beta_dist)
@@ -396,16 +435,20 @@ server <- function(input, output, session) {
     }
     
     # Apply theme and text size
-    p <- apply_plot_theme(p, axis_text_size = input$beta_label_size, axis_title_size = input$beta_label_size,
-                          legend_text_size = input$beta_label_size, legend_title_size = input$beta_label_size,
-                          strip_text_size = input$beta_label_size)
+    p <- p + theme(
+      axis.text = element_text(size = input$beta_label_size),
+      axis.title = element_text(size = input$beta_label_size),
+      legend.text = element_text(size = input$beta_label_size),
+      legend.title = element_text(size = input$beta_label_size),
+      strip.text = element_text(size = input$beta_label_size)
+    )
     
 
     if (!is.null(input$beta_facet) && input$beta_facet != "None") {
       p <- p + facet_wrap(as.formula(paste("~", input$beta_facet)))
     }
     
-    p
+    ggplotly(p)
   })
   
   output$permanova_group_selector <- renderUI({
@@ -440,6 +483,45 @@ server <- function(input, output, session) {
     permanova_result()
   })
   
+  dendrogram_phyloseq_custom <- function(phyloseq_obj, treatment = NULL, method = "bray",
+                                         colors = "default", label_size = 2.5) {
+    dend <- phylosmith::dendrogram_phyloseq(
+      phyloseq_obj = phyloseq_obj,
+      treatment = treatment,
+      method = method,
+      colors = colors
+    )
+    
+    # Identify and replace the geom_label layer with new size
+    label_data <- NULL
+    label_mapping <- NULL
+    
+    for (layer in dend$layers) {
+      if (inherits(layer$geom, "GeomLabel") || inherits(layer$geom, "GeomText")) {
+        label_data <- layer$data
+        label_mapping <- layer$mapping
+      }
+    }
+    
+    if (!is.null(label_data)) {
+      dend$layers <- Filter(function(l) {
+        !inherits(l$geom, "GeomLabel") && !inherits(l$geom, "GeomText")
+      }, dend$layers)
+      
+      dend <- dend + 
+        ggplot2::geom_label(
+          data = label_data,
+          mapping = label_mapping,
+          size = label_size,
+          color = "white",
+          label.padding = unit(0.2, "lines"),
+          fontface = "bold",
+          hjust = 1.05
+        )
+    }
+    
+    return(dend)
+  }
   
   output$dend_treatment_selector <- renderUI({
     req(final_physeq())
@@ -487,11 +569,11 @@ server <- function(input, output, session) {
                 selected = "None")
   })
   
-  output$tsne_plot <- renderPlot({
+  output$tsne_plot <- renderPlotly({
     req(input$run_tsne)
     req(final_physeq(), input$tsne_group)
     
-    tsne_phyloseq(
+    p <- tsne_phyloseq(
       phyloseq_obj = final_physeq(),
       treatment = input$tsne_group,
       perplexity = input$tsne_perplexity,
@@ -499,14 +581,23 @@ server <- function(input, output, session) {
       labels = if (input$tsne_label != "None") input$tsne_label else NULL,
       colors = "default"
     )
+    ggplotly(p)
   })
   
   observeEvent(input$reset_tsne, {
     show_tsne(FALSE)
   })
   
+  output$numeric_column_selector_ui <- renderUI({
+    req(final_physeq())
+    df <- as.data.frame(sample_data(final_physeq()))
+    numeric_cols <- names(df)[sapply(df, is.numeric)]
+    selectInput("numeric_cols", "Select numeric metadata columns:",
+                choices = numeric_cols, multiple = TRUE)
+  })
+  
   observeEvent(input$create_transenv, {
-    req(final_physeq(), input$colx, input$coly)
+    req(final_physeq(), input$numeric_cols)
     
     dataset <- phyloseq2meco(final_physeq())
     dataset$tidy_dataset()
@@ -514,10 +605,15 @@ server <- function(input, output, session) {
     dataset$cal_alphadiv()
     dataset$cal_betadiv()
     
-    env_obj <- trans_env$new(dataset = dataset, env_cols = input$colx:input$coly)
-    reactiveValues_envfit$transenv <- env_obj
+    # Get the full metadata data frame
+    meta_df <- as.data.frame(sample_data(final_physeq()))
     
-
+    # Find the numeric indices of the selected column names
+    selected_indices <- which(names(meta_df) %in% input$numeric_cols)
+    
+    # Create the trans_env object using the indices
+    env_obj <- trans_env$new(dataset = dataset, env_cols = selected_indices)
+    reactiveValues_envfit$transenv <- env_obj
     
     output$transenv_display <- renderPrint({
       env_obj
@@ -551,7 +647,7 @@ server <- function(input, output, session) {
           selectInput("rda_color", "Color by:", choices = factor_vars, selected = factor_vars[1]),
           selectInput("rda_shape", "Point Shape", choices = factor_vars, selected = factor_vars[1]),
           selectInput("rda_label", "Sample Labels:", choices = c("None", names(sample_meta)), selected = "None"),
-          sliderInput("rda_textsize", "Text Size", value = 3, min = 3, max = 8, step = 1)
+          sliderInput("rda_textsize", "Text Size", value = 6, min = 6, max = 15, step = 1)
         )
       ),
       conditionalPanel(
@@ -619,15 +715,16 @@ server <- function(input, output, session) {
 
     
     
-    rda_plot <- e1$plot_ordination(
+     e1$plot_ordination(
       plot_color = input$rda_color,
       plot_shape = shape_input,
       env_text_size = input$rda_textsize,
       taxa_text_size = input$rda_textsize,
-      add_sample_label = label_input
+      add_sample_label = label_input,
+      point_size = input$rda_textsize
     )
-    
-    print(rda_plot)
+
+ 
   })
   
   output$corr_plot <- renderPlot({
@@ -655,7 +752,7 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$run_mantel_analysis, {
-    req(final_physeq())
+    req(final_physeq(), input$numeric_cols)
     
     dataset <- phyloseq2meco(final_physeq())
     dataset$tidy_dataset()
@@ -663,7 +760,12 @@ server <- function(input, output, session) {
     # Get group variable
     group_col <- input$mantel_group
     group_vals <- unique(sample_data(final_physeq())[[group_col]])
-    env_range <- input$colx:input$coly
+    
+    # Get the full metadata data frame
+    meta_df <- as.data.frame(sample_data(final_physeq()))
+    
+    # Find the numeric indices of the selected column names
+    selected_indices <- which(names(meta_df) %in% input$numeric_cols)
     
     if (length(group_vals) < 2) {
       showNotification("You need at least two groups to compare.", type = "error")
@@ -680,7 +782,7 @@ server <- function(input, output, session) {
       d$tidy_dataset()
       d$cal_betadiv()
       
-      t <- trans_env$new(dataset = d, env_cols = env_range)
+      t <- trans_env$new(dataset = d, env_cols = selected_indices)
       t$cal_mantel(use_measure = "bray", partial_mantel = TRUE)
       
       x <- data.frame(spec = g, t$res_mantel)[, c(1, 3, 6, 8)]
@@ -700,14 +802,21 @@ server <- function(input, output, session) {
     output$mantel_plot <- renderPlot({
       req(mantel_objs[[1]])
       
-      MantCorr.Sn <- quickcor(mantel_objs[[1]]$data_env, type = "upper", cor.test = TRUE, show.diag = FALSE) +
-        geom_square() +
+      MantCorr.Sn <- quickcor(mantel_objs[[1]]$data_env, type = "upper", cor.test = TRUE, show.diag = TRUE) +
+        geom_square() +scale_fill_distiller(palette = "RdBu", direction = 1)+
+        #geom_mark(sig.thres = 0.05, color = "black", size = 0) +
         anno_link(aes(colour = pd, size = rd), data = combined_table) +
         scale_size_manual(values = c(0.5, 1.5, 3)) +
         scale_colour_manual(values = c("#D95F02", "#1B9E77", "#A2A2A288")) +
         guides(size = guide_legend(title = "Mantel's r", override.aes = list(colour = "grey35"), order = 2),
                colour = guide_legend(title = "Mantel's p", override.aes = list(size = 3), order = 1),
-               fill = guide_colorbar(title = "Pearson's r", order = 3))
+               fill = guide_colorbar(title = "Pearson's r", order = 3))+
+        theme(
+          axis.text.x = element_text(size = 12, angle = 45, hjust = 1),
+          axis.text.y = element_text(size = 12),
+          legend.title = element_text(size = 12),
+          legend.text = element_text(size = 10)
+        )
       
       MantCorr.Sn
     })
@@ -786,9 +895,7 @@ server <- function(input, output, session) {
       label.x.npc = "left", label.y.npc = "top",
       x_axis_title = input$selected_taxon,
       y_axis_title = input$env_var
-    )
-    p <- apply_plot_theme(p, axis_text_size = input$regression_text_size, axis_title_size = input$regression_text_size,
-                          legend_text_size = input$regression_text_size, legend_title_size = input$regression_text_size)
+    )  +theme_classic()
     
     print(p)
   })

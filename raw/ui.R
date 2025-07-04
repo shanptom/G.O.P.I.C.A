@@ -3,19 +3,7 @@ library(shinyBS)
 library(shinyjs)
 library(shinycssloaders)
 library(bslib)
-library(phyloseq)
-library(ggplot2)
-library(vegan)
-library(ranacapa)
-library(phylosmith)
-library(microeco)
-library(file2meco)
-library(GUniFrac)
-library(RColorBrewer)
-library(ggalluvial)
-library(dplyr)
-library(ggcor)
-library(ggpubr)
+library(plotly)
 
 ui <- fluidPage(
   useShinyjs(),
@@ -86,11 +74,12 @@ ui <- fluidPage(
                               fileInput("meta", "Upload Metadata Table (CSV)", accept = ".csv"),
                               fileInput("phylo", "Or Upload Phyloseq Object (.rds)", accept = ".rds")
                             ),
-                            mainPanel(width = 9,verbatimTextOutput("upload_status"),
+                            mainPanel(width = 9,
+                                      uiOutput("upload_status_ui")
                                       )
                           )
                  ),
-                 tabPanel("Filter",
+                 tabPanel("Filter", value = "filter_tab",
                           sidebarLayout(
                             sidebarPanel(width = 3,
                               checkboxInput("skip_filter", "Skip Filtering"),
@@ -103,7 +92,7 @@ ui <- fluidPage(
                             mainPanel(width = 9,verbatimTextOutput("filter_status"))
                           )
                  ),
-                 tabPanel("Rarefaction Plot",
+                 tabPanel("Rarefaction Plot", value = "rarefaction_tab",
                           sidebarLayout(
                             sidebarPanel(width = 3,
                               uiOutput("rarefaction_color_selector"),
@@ -113,7 +102,7 @@ ui <- fluidPage(
                             mainPanel(width = 9,plotOutput("rarefactionPlot",height = "770px", width = "100%"))
                           )
                  ),
-                 tabPanel("Abundance",
+                 tabPanel("Abundance", value = "abundance_tab",
                       sidebarLayout(
                         sidebarPanel(width = 3,
                           radioButtons("abund_plot_type", "Plot Type:",
@@ -136,11 +125,11 @@ ui <- fluidPage(
                           sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12),
                           checkboxInput("flip_abundance", "Flip axes (horizontal plot)", value = FALSE)
                         ),
-                        mainPanel(width = 9,plotOutput("abundancePlot", height = "770px", width = "100%"))
+                        mainPanel(width = 9, uiOutput("abundance_plot_output"))
                       )
                  ),
 
-                 tabPanel("Alpha Diversity",
+                 tabPanel("Alpha Diversity", value = "alpha_tab",
                           sidebarLayout(
                             sidebarPanel(width = 3,
                               checkboxGroupInput("alpha_index", "Select Diversity Index:",
@@ -155,7 +144,7 @@ ui <- fluidPage(
                             mainPanel(width = 9,plotOutput("alphaPlot",height = "770px", width = "100%"))
                           )
                  ),
-                   tabPanel("Dendrogram",
+                   tabPanel("Dendrogram", value = "dendrogram_tab",
                       sidebarLayout(
                         sidebarPanel(width = 3,
                                      uiOutput("dend_treatment_selector"),
@@ -169,61 +158,69 @@ ui <- fluidPage(
                         
                         mainPanel(width = 9,plotOutput("dendrogramPlot", height = "770px", width = "100%")))
              ),
-                tabPanel("Ordination",
+                tabPanel("Ordination", value = "ordination_tab",
                       sidebarLayout(
                         sidebarPanel(width = 3,
-                          selectInput("beta_dist", "Distance Method:",
-                                      choices = c("bray", "unifrac", "wunifrac", "jaccard", "dpcoa", "jsd", "manhattan",
-                                                  "euclidean", "canberra", "binomial"),
-                                      selected = "bray"),
-                          selectInput("beta_ord", "Ordination Method:",
-                                      choices = c("NMDS", "MDS", "PCoA", "DCA", "CCA", "RDA", "DPCoA"),
-                                      selected = "NMDS"),
-                          uiOutput("beta_color_selector"),
-                          uiOutput("beta_shape_selector"),
-                          uiOutput("beta_label_selector"),
-                          uiOutput("beta_facet_selector"),
-                          sliderInput("beta_label_size", "Axis Text Size:", min = 6, max = 20, value = 12),
-                          sliderInput("beta_label_text_size", "Label Text Size:", min = 2, max = 15, value = 3),
-                          sliderInput("beta_shape_size", "Shape Size:", min = 1, max = 10, value = 4),
-                          tags$hr(),
-                          h4("PERMANOVA"),
-                          uiOutput("permanova_group_selector"),
-                          actionButton("run_permanova", "Run PERMANOVA"),
-                          verbatimTextOutput("permanova_result"),
-                          tags$hr(),
-                          h4("tSNE Analysis"),
-                          uiOutput("tsne_group_selector"),
-                          uiOutput("tsne_perplexity_selector"),
-                          checkboxInput("tsne_circle", "Draw circles", value = FALSE),
-                          uiOutput("tsne_label_selector"),
-                          actionButton("run_tsne", "Run tSNE"),
-                          conditionalPanel(
-                            condition = "output.show_tsne_flag",
-                            actionButton("reset_tsne", "Back to Ordination")
+                          bsCollapse(id = "ordination_collapse_panel",
+                            bsCollapsePanel("Ordination Settings",
+                              selectInput("beta_dist", "Distance Method:",
+                                          choices = c("bray", "unifrac", "wunifrac", "jaccard", "dpcoa", "jsd", "manhattan",
+                                                      "euclidean", "canberra", "binomial"),
+                                          selected = "bray"),
+                              selectInput("beta_ord", "Ordination Method:",
+                                          choices = c("NMDS", "MDS", "PCoA", "DCA", "CCA", "RDA", "DPCoA"),
+                                          selected = "NMDS"),
+                              style = "info"
+                            ),
+                            bsCollapsePanel("Aesthetics",
+                              uiOutput("beta_color_selector"),
+                              uiOutput("beta_shape_selector"),
+                              uiOutput("beta_label_selector"),
+                              uiOutput("beta_facet_selector"),
+                              sliderInput("beta_label_size", "Axis Text Size:", min = 6, max = 20, value = 12),
+                              sliderInput("beta_label_text_size", "Label Text Size:", min = 2, max = 15, value = 3),
+                              sliderInput("beta_shape_size", "Shape Size:", min = 1, max = 10, value = 4),
+                              style = "info"
+                            ),
+                            bsCollapsePanel("PERMANOVA",
+                              uiOutput("permanova_group_selector"),
+                              actionButton("run_permanova", "Run PERMANOVA"),
+                              verbatimTextOutput("permanova_result"),
+                              style = "info"
+                            ),
+                            bsCollapsePanel("t-SNE Analysis",
+                              uiOutput("tsne_group_selector"),
+                              uiOutput("tsne_perplexity_selector"),
+                              checkboxInput("tsne_circle", "Draw circles", value = FALSE),
+                              uiOutput("tsne_label_selector"),
+                              actionButton("run_tsne", "Run tSNE"),
+                              conditionalPanel(
+                                condition = "output.show_tsne_flag",
+                                actionButton("reset_tsne", "Back to Ordination")
+                              ),
+                              style = "info"
+                            )
                           )
-                          
                         ),
                         mainPanel(width = 9,
                                   conditionalPanel(
                                     condition = "!output.show_tsne_flag",
-                                    plotOutput("betaPlot", height = "770px", width = "100%")
+                                    plotlyOutput("betaPlot", height = "770px", width = "100%")
                                   ),
                                   conditionalPanel(
                                     condition = "output.show_tsne_flag",
-                                    plotOutput("tsne_plot", height = "770px", width = "100%")
+                                    plotlyOutput("tsne_plot", height = "770px", width = "100%")
                                   )
                         
                         )
                       )
              ),
-             tabPanel("Metadata Analysis",
+             tabPanel("Metadata Analysis", value = "metadata_tab",
                       fluidRow(
                         column(
                           width = 3,
                           # Initial controls (trans_env creation)
-                          numericInput("colx", "Enter the column number where numerical data starts:", value = 1, min = 1),
-                          numericInput("coly", "Enter the column number where numerical data ends:", value = 1, min = 1),
+                          uiOutput("numeric_column_selector_ui"),
                           actionButton("create_transenv", "Create trans_env Object"),
                           br(), br(),
                           verbatimTextOutput("transenv_display"),
@@ -239,7 +236,7 @@ ui <- fluidPage(
                       )
                       
              ),
-             tabPanel("Regression",
+             tabPanel("Regression", value = "regression_tab",
                       fluidRow(
                         column(
                           width = 3,
@@ -251,7 +248,6 @@ ui <- fluidPage(
                           actionButton("run_scatter", "Run Scatter Plot"),
                           sliderInput("point_alpha", "Point Alpha:", min = 0.1, max = 1, value = 0.5, step = 0.1),
                           sliderInput("point_size", "Point Size:", min = 1, max = 6, value = 3),
-                          sliderInput("regression_text_size", "Text Size:", min = 6, max = 20, value = 12),
                           
                         ),
                         column(
