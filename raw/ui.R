@@ -99,7 +99,7 @@ ui <- fluidPage(
                               uiOutput("rarefaction_facet_selector"),
                               sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12)
                             ),
-                            mainPanel(width = 9,plotOutput("rarefactionPlot",height = "770px", width = "100%"))
+                            mainPanel(width = 9,withSpinner(plotOutput("rarefactionPlot",height = "770px", width = "100%")))
                           )
                  ),
                  tabPanel("Abundance", value = "abundance_tab",
@@ -125,7 +125,7 @@ ui <- fluidPage(
                           sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12),
                           checkboxInput("flip_abundance", "Flip axes (horizontal plot)", value = FALSE)
                         ),
-                        mainPanel(width = 9, uiOutput("abundance_plot_output"))
+                        mainPanel(width = 9, withSpinner(uiOutput("abundance_plot_output")))
                       )
                  ),
 
@@ -141,7 +141,7 @@ ui <- fluidPage(
                               textInput("alpha_order", "Custom order (comma-separated values) ", value = ""),
                               sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12)
                             ),
-                            mainPanel(width = 9,plotOutput("alphaPlot",height = "770px", width = "100%"))
+                            mainPanel(width = 9,withSpinner(plotOutput("alphaPlot",height = "770px", width = "100%")))
                           )
                  ),
                    tabPanel("Dendrogram", value = "dendrogram_tab",
@@ -156,7 +156,7 @@ ui <- fluidPage(
                                      sliderInput("dend_label_size", "Label size:", min = 3, max = 10, value = 5, step = 1)
                         ),
                         
-                        mainPanel(width = 9,plotOutput("dendrogramPlot", height = "770px", width = "100%")))
+                        mainPanel(width = 9,withSpinner(plotOutput("dendrogramPlot", height = "770px", width = "100%"))))
              ),
                 tabPanel("Ordination", value = "ordination_tab",
                       sidebarLayout(
@@ -205,11 +205,11 @@ ui <- fluidPage(
                         mainPanel(width = 9,
                                   conditionalPanel(
                                     condition = "!output.show_tsne_flag",
-                                    plotlyOutput("betaPlot", height = "770px", width = "100%")
+                                    withSpinner(plotlyOutput("betaPlot", height = "770px", width = "100%"))
                                   ),
                                   conditionalPanel(
                                     condition = "output.show_tsne_flag",
-                                    plotlyOutput("tsne_plot", height = "770px", width = "100%")
+                                    withSpinner(plotlyOutput("tsne_plot", height = "770px", width = "100%"))
                                   )
                         
                         )
@@ -231,7 +231,7 @@ ui <- fluidPage(
                         ),
                         column(
                           width = 9,
-                          uiOutput("visualization_main")  # RDA plot output
+                          withSpinner(uiOutput("visualization_main"))  # RDA plot output
                         )
                       )
                       
@@ -252,7 +252,24 @@ ui <- fluidPage(
                         ),
                         column(
                           width = 9,
-                          plotOutput("regression_plot", height = "770px")
+                          withSpinner(plotOutput("regression_plot", height = "770px"))
+                        )
+                      )
+             ),
+             tabPanel("Indicator Species", value = "indicator_tab",
+                      sidebarLayout(
+                        sidebarPanel(width = 3,
+                          h4("SHAP Analysis for Indicator Species"),
+                          uiOutput("indicator_variable_selector"),
+                          uiOutput("indicator_group1_selector"),
+                          uiOutput("indicator_group2_selector"),
+                          sliderInput("top_n_taxa", "Number of Top Taxa to Display:", min = 5, max = 30, value = 10, step = 1),
+                          sliderInput("indicator_font_size", "Font Size:", min = 6, max = 20, value = 10, step = 1),
+                          actionButton("run_indicator_analysis", "Run Analysis")
+                        ),
+                        mainPanel(width = 9,
+                          withSpinner(plotOutput("indicator_plot", height = "770px")),
+                          dataTableOutput("indicator_table")
                         )
                       )
              )

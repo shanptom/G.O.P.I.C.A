@@ -274,14 +274,26 @@ server <- function(input, output, session) {
         color_values = RColorBrewer::brewer.pal(8, "Set2")
       )
     } else if (input$abund_plot_type == "heat") {
-      p4 <- t1$plot_heatmap(
-        xtext_keep = TRUE,
-        xtext_angle = 90,
-        xtext_size = input$beta_label_size,
-        ytext_size = input$beta_label_size,
-        withmargin = FALSE,
-        plot_breaks = c(0.01, 0.1, 1, 10)
-      )
+      if (input$flip_abundance) {
+        p4 <- t1$plot_heatmap(
+          xtext_keep = TRUE,
+          xtext_angle = 90,
+          xtext_size = input$beta_label_size,
+          ytext_size = input$beta_label_size,
+          withmargin = FALSE,
+          plot_breaks = c(0.01, 0.1, 1, 10),
+          y_element_keep = TRUE # Transpose axes
+        )
+      } else {
+        p4 <- t1$plot_heatmap(
+          xtext_keep = TRUE,
+          xtext_angle = 90,
+          xtext_size = input$beta_label_size,
+          ytext_size = input$beta_label_size,
+          withmargin = FALSE,
+          plot_breaks = c(0.01, 0.1, 1, 10)
+        )
+      }
     } else {
       p4 <- t1$plot_bar(
         others_color = "grey70",
@@ -312,7 +324,7 @@ server <- function(input, output, session) {
       }
     }
     
-    if (input$flip_abundance) {
+    if (input$flip_abundance && input$abund_plot_type != "heat") {
       p4 <- p4 + coord_flip()
     }
     
@@ -898,6 +910,56 @@ server <- function(input, output, session) {
     )  +theme_classic()
     
     print(p)
+  })
+  
+  # Indicator Species Analysis Server Logic
+  source("shap-phyloseq.R", local = TRUE)
+
+  output$indicator_variable_selector <- renderUI({
+    req(final_physeq())
+    meta_cols <- colnames(sample_data(final_physeq()))
+    selectInput("indicator_var", "Select Metadata Variable:", choices = meta_cols)
+  })
+
+  output$indicator_group1_selector <- renderUI({
+    req(final_physeq(), input$indicator_var)
+    choices <- unique(as.data.frame(sample_data(final_physeq()))[[input$indicator_var]])
+    selectInput("indicator_group1", "Select Group 1 (will be coded as 1):", choices = choices, selected = choices[1])
+  })
+
+  output$indicator_group2_selector <- renderUI({
+    req(final_physeq(), input$indicator_var)
+    choices <- unique(as.data.frame(sample_data(final_physeq()))[[input$indicator_var]])
+    selectInput("indicator_group2", "Select Group 2 (will be coded as 0):", choices = choices, selected = choices[2])
+  })
+
+  indicator_results <- eventReactive(input$run_indicator_analysis, {
+    req(final_physeq(), input$indicator_var, input$indicator_group1, input$indicator_group2)
+    
+    ps <- final_physeq()
+    
+    # Run the SHAP analysis function from the sourced script
+    results <- run_shap_analysis(
+      phyloseq_obj = ps,
+      variable = input$indicator_var,
+      group1 = input$indicator_group1,
+      top_n = input$top_n_taxa,
+      font_size = input$indicator_font_size
+    )
+    
+    return(results)
+  })
+
+  output$indicator_plot <- renderPlot({
+    results <- indicator_results()
+    req(results$plot)
+    results$plot
+  })
+
+  output$indicator_table <- renderDataTable({
+    results <- indicator_results()
+    req(results$table)
+    results$table
   })
   
 }
