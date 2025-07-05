@@ -61,6 +61,8 @@ Once all dependencies are installed, launch the application in one of two ways:
 
 The application will open in a new window or your default web browser.
 
+For a more comprehensive walkthrough of the app, see the [User Guide](docs/user_guide.md).
+
 ---
 
 ## 💾 Input Data Requirements
