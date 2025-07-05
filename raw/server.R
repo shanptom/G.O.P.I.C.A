@@ -281,7 +281,7 @@ server <- function(input, output, session) {
   })
   
   output$abundance_plot_output <- renderUI({
-    if (input$abund_plot_type == "line") {
+    if (input$abund_plot_type == "line" || input$abund_plot_type == "heat") {
       plotOutput("abundancePlotStatic", height = "770px", width = "100%")
     } else {
       plotlyOutput("abundancePlotly", height = "770px", width = "100%")
@@ -289,85 +289,91 @@ server <- function(input, output, session) {
   })
 
   abundance_plot_obj <- reactive({
-    req(final_physeq(), input$tax_rank, input$ntaxa)
-    dataset <- phyloseq2meco(final_physeq())
-    dataset$tidy_dataset()
-    dataset$cal_abund()
-    t1 <- trans_abund$new(dataset = dataset, taxrank = input$tax_rank, ntaxa = input$ntaxa)
-    scale_type <- if (input$flip_abundance) "free_y" else "free_x"
-    
-    if (input$abund_plot_type == "line") {
-      p4 <- t1$plot_bar(
-        bar_type = "notfull",
-        use_alluvium = TRUE,
-        clustering = TRUE,
-        xtext_angle = 90,
-        xtext_size = input$beta_label_size,
-        color_values = RColorBrewer::brewer.pal(8, "Set2")
-      )
-    } else if (input$abund_plot_type == "heat") {
+  req(final_physeq(), input$tax_rank, input$ntaxa)
+  dataset <- phyloseq2meco(final_physeq())
+  dataset$tidy_dataset()
+  dataset$cal_abund()
+  t1 <- trans_abund$new(dataset = dataset, taxrank = input$tax_rank, ntaxa = input$ntaxa)
+  scale_type <- if (input$flip_abundance) "free_y" else "free_x"
+
+  if (input$abund_plot_type == "line") {
+    p4 <- t1$plot_bar(
+      bar_type = "notfull",
+      use_alluvium = TRUE,
+      clustering = TRUE,
+      xtext_angle = 90,
+      xtext_size = input$beta_label_size,
+      color_values = RColorBrewer::brewer.pal(8, "Set2")
+    )
+  } else if (input$abund_plot_type == "bar") {
+    p4 <- t1$plot_bar(
+      others_color = "grey70",
+      xtext_angle = 90,
+      xtext_size = input$beta_label_size,
+      legend_text_italic = FALSE
+    )
+  } else if (input$abund_plot_type == "heat") {
+    p4 <- t1$plot_heatmap(
+      xtext_keep = TRUE,
+      xtext_angle = 90,
+      xtext_size = input$beta_label_size,
+      ytext_size = input$beta_label_size,
+      withmargin = FALSE,
+      plot_breaks = c(0.01, 0.1, 1, 10)
+    )
+  }
+
+  for (var in names(ordering_rules)) {
+    if (var %in% colnames(p4$data)) {
+      p4$data[[var]] <- factor(p4$data[[var]], levels = ordering_rules[[var]])
+    }
+  }
+
+  if (!is.null(input$abund_facet) && input$abund_facet != "None") {
+    facet_formula <- as.formula(paste("~", input$abund_facet))
+    if (input$abund_plot_type == "heat") {
       if (input$flip_abundance) {
-        p4 <- t1$plot_heatmap(
-          xtext_keep = TRUE,
-          xtext_angle = 90,
-          xtext_size = input$beta_label_size,
-          ytext_size = input$beta_label_size,
-          withmargin = FALSE,
-          plot_breaks = c(0.01, 0.1, 1, 10),
-          y_element_keep = TRUE # Transpose axes
-        )
+        p4 <- p4 + facet_wrap(facet_formula, scales = "free_y")
       } else {
-        p4 <- t1$plot_heatmap(
-          xtext_keep = TRUE,
-          xtext_angle = 90,
-          xtext_size = input$beta_label_size,
-          ytext_size = input$beta_label_size,
-          withmargin = FALSE,
-          plot_breaks = c(0.01, 0.1, 1, 10)
-        )
+        p4 <- p4 + facet_wrap(facet_formula, scales = "free_x")
       }
     } else {
-      p4 <- t1$plot_bar(
-        others_color = "grey70",
-        xtext_angle = 90,
-        xtext_size = input$beta_label_size,
-        legend_text_italic = FALSE
-      )
-    }
-    
-    for (var in names(ordering_rules)) {
-      if (var %in% colnames(p4$data)) {
-        p4$data[[var]] <- factor(p4$data[[var]], levels = ordering_rules[[var]])
-      }
-    }
-    
-    if (!is.null(input$abund_facet) && input$abund_facet != "None") {
-      facet_formula <- as.formula(paste("~", input$abund_facet))
       p4 <- p4 + facet_wrap(facet_formula, scales = scale_type)
     }
-    # Apply custom ordering if specified
-    if (nzchar(input$abund_order)) {
-      custom_order <- trimws(unlist(strsplit(input$abund_order, ",")))
-      
-      if (input$abund_facet %in% colnames(p4$data)) {
-        p4$data[[input$abund_facet]] <- factor(p4$data[[input$abund_facet]], levels = custom_order)
-      } else if ("Sample" %in% colnames(p4$data)) {
-        p4$data$Sample <- factor(p4$data$Sample, levels = custom_order)
-      }
+  }
+
+  if (nzchar(input$abund_order)) {
+    custom_order <- trimws(unlist(strsplit(input$abund_order, ",")))
+    if (input$abund_facet %in% colnames(p4$data)) {
+      p4$data[[input$abund_facet]] <- factor(p4$data[[input$abund_facet]], levels = custom_order)
+    } else if ("Sample" %in% colnames(p4$data)) {
+      p4$data$Sample <- factor(p4$data$Sample, levels = custom_order)
     }
-    
-    if (input$flip_abundance && input$abund_plot_type != "heat") {
-      p4 <- p4 + coord_flip()
-    }
-    
-    p4 +
-      theme(
-        axis.text = element_text(size = input$beta_label_size),
-        axis.title = element_text(size = input$beta_label_size),
-        legend.text = element_text(size = input$beta_label_size),
-        legend.title = element_text(size = input$beta_label_size)
-      )
-  })
+  }
+
+  if (input$flip_abundance) {
+    p4 <- p4 + coord_flip()
+  }
+
+  if (input$abund_plot_type == "heat" && input$flip_abundance) {
+  # Identify the variable used as x-axis (was y-axis before flipping)
+  # In most microeco heatmaps, y = taxa, x = sample (or vice versa depending on transposition)
+  axis_var <- names(p4$data)[1]  # or explicitly set e.g., "Sample" or "Taxon"
+  
+  # Drop unused levels in that axis_var
+p4$data$Sample <- factor(p4$data$Sample)
+p4$data$Sample <- droplevels(p4$data$Sample)
+}
+
+  p4 +
+    theme(
+      axis.text = element_text(size = input$beta_label_size),
+      axis.title = element_text(size = input$beta_label_size),
+      legend.text = element_text(size = input$beta_label_size),
+      legend.title = element_text(size = input$beta_label_size),
+      strip.text = element_text(size = input$beta_label_size)
+    )
+})
 
   output$abundancePlotly <- renderPlotly({
     p <- abundance_plot_obj()
@@ -409,11 +415,14 @@ server <- function(input, output, session) {
       x = x_var,
       measures = input$alpha_index,
       scales = scale_type
-    )
+    ) + geom_point(size = 7)
+
+    p + geom_point(size=5, alpha=0.7)
     
     # Apply color only if valid
     if (input$alpha_colour != "None") {
       p <- p + aes_string(color = input$alpha_colour)
+      p + geom_point(size=7, alpha=0.7)
     }
     
     # Reorder if custom order given
