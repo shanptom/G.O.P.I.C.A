@@ -279,6 +279,22 @@ server <- function(input, output, session) {
     categorical_cols <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
     selectInput("abund_facet", "Facet by:", choices = c("None", categorical_cols), selected = "None")
   })
+
+  output$abundance_order_selector <- renderUI({
+    req(final_physeq(), input$abund_facet)
+    if (!is.null(input$abund_facet) && input$abund_facet != "None") {
+      df <- as.data.frame(sample_data(final_physeq()))
+      choices <- unique(df[[input$abund_facet]])
+      selectizeInput("abund_order", "Custom Order (drag to reorder):", 
+                     choices = choices, selected = choices, multiple = TRUE, 
+                     options = list(plugins = list('drag_drop')))
+    } else {
+      choices <- sample_names(final_physeq())
+      selectizeInput("abund_order", "Custom Sample Order (drag to reorder):", 
+                     choices = choices, selected = choices, multiple = TRUE, 
+                     options = list(plugins = list('drag_drop')))
+    }
+  })
   
   output$abundance_plot_output <- renderUI({
     if (input$abund_plot_type == "line" || input$abund_plot_type == "heat") {
@@ -342,12 +358,11 @@ server <- function(input, output, session) {
     }
   }
 
-  if (nzchar(input$abund_order)) {
-    custom_order <- trimws(unlist(strsplit(input$abund_order, ",")))
-    if (input$abund_facet %in% colnames(p4$data)) {
-      p4$data[[input$abund_facet]] <- factor(p4$data[[input$abund_facet]], levels = custom_order)
+  if (!is.null(input$abund_order) && length(input$abund_order) > 0) {
+    if (input$abund_facet != "None" && input$abund_facet %in% colnames(p4$data)) {
+      p4$data[[input$abund_facet]] <- factor(p4$data[[input$abund_facet]], levels = input$abund_order)
     } else if ("Sample" %in% colnames(p4$data)) {
-      p4$data$Sample <- factor(p4$data$Sample, levels = custom_order)
+      p4$data$Sample <- factor(p4$data$Sample, levels = input$abund_order)
     }
   }
 
@@ -392,6 +407,22 @@ p4$data$Sample <- droplevels(p4$data$Sample)
                 choices = c("None", categorical_cols),
                 selected = "None")
   })
+
+  output$alpha_order_selector <- renderUI({
+    req(final_physeq(), input$alpha_group)
+    if (!is.null(input$alpha_group) && input$alpha_group != "None") {
+      df <- as.data.frame(sample_data(final_physeq()))
+      choices <- unique(df[[input$alpha_group]])
+      selectizeInput("alpha_order", "Custom Order (drag to reorder):", 
+                     choices = choices, selected = choices, multiple = TRUE, 
+                     options = list(plugins = list('drag_drop')))
+    } else {
+      choices <- sample_names(final_physeq())
+      selectizeInput("alpha_order", "Custom Sample Order (drag to reorder):", 
+                     choices = choices, selected = choices, multiple = TRUE, 
+                     options = list(plugins = list('drag_drop')))
+    }
+  })
   
   output$alpha_colour_selector <- renderUI({
     req(final_physeq())
@@ -426,7 +457,13 @@ p4$data$Sample <- droplevels(p4$data$Sample)
     }
     
     # Reorder if custom order given
-    p <- reorder_factor_column(p, x_var, input$alpha_order)
+    if (!is.null(input$alpha_order) && length(input$alpha_order) > 0) {
+      if (x_var != "samples" && x_var %in% colnames(p$data)) {
+        p$data[[x_var]] <- factor(p$data[[x_var]], levels = input$alpha_order)
+      } else if ("samples" %in% colnames(p$data)) {
+        p$data$samples <- factor(p$data$samples, levels = input$alpha_order)
+      }
+    }
     
     p <- p + theme(axis.text.x = element_text(angle = 90, hjust = 1))
     
@@ -957,13 +994,20 @@ p4$data$Sample <- droplevels(p4$data$Sample)
       group = group_val,
       type = "lm",
       point_size = input$point_size,
-      point_alpha = input$point_alpha,
+      point_alpha = 1,
       line_color = "#2A0E3C",
       line_se_color = "#A87CA0",
       label.x.npc = "left", label.y.npc = "top",
       x_axis_title = input$selected_taxon,
       y_axis_title = input$env_var
-    )  +theme_classic()
+    ) + theme_classic() + 
+    theme(
+      axis.text = element_text(size = input$text_size),
+      axis.title = element_text(size = input$text_size),
+      legend.text = element_text(size = input$text_size),
+      legend.title = element_text(size = input$text_size),
+      text = element_text(size = input$text_size)  # This should cover annotations like equations
+    )
     
     print(p)
   })

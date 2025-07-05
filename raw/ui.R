@@ -114,15 +114,7 @@ ui <- fluidPage(
                           sliderInput("ntaxa", "Number of Top Taxa:", min = 5, max = 15, value = 8, step = 1),
                           uiOutput("abundance_facet_selector"),
                           
-                          div(
-                            style = "display: flex; align-items: center;",
-                            tags$label(
-                              "Custom Order (comma-separated) ℹ ",
-                              `title` = "Specify sample names in the order you want them to appear on the plot. Example: Sample3, Sample2, Sample1"
-                            ),
-                
-                          ),
-                          textInput("abund_order", label = NULL, value = ""),
+                          uiOutput("abundance_order_selector"),
                           
                           sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12),
                           checkboxInput("flip_abundance", "Flip axes (horizontal plot)", value = FALSE)
@@ -140,7 +132,7 @@ ui <- fluidPage(
                               uiOutput("alpha_group_selector"),
                               uiOutput("alpha_colour_selector"),
                               checkboxInput("flip_alpha", "Flip axes (horizontal plot)", value = FALSE),
-                              textInput("alpha_order", "Custom order (comma-separated values) ", value = ""),
+                              uiOutput("alpha_order_selector"),
                               sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12)
                             ),
                             mainPanel(width = 9,withSpinner(plotOutput("alphaPlot",height = "770px", width = "100%")))
@@ -248,8 +240,8 @@ ui <- fluidPage(
                                       choices = NULL),
                           uiOutput("regression_group_selector"),
                           actionButton("run_scatter", "Run Scatter Plot"),
-                          sliderInput("point_alpha", "Point Alpha:", min = 0.1, max = 1, value = 0.5, step = 0.1),
                           sliderInput("point_size", "Point Size:", min = 1, max = 6, value = 3),
+                          sliderInput("text_size", "Text Size:", min = 6, max = 20, value = 12),
                           
                         ),
                         column(
