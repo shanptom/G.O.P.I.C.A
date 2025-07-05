@@ -1093,7 +1093,7 @@ p4$data$Sample <- droplevels(p4$data$Sample)
   })
   
   # Indicator Species Analysis Server Logic
-  source("src/shap-phyloseq.R", local = TRUE)
+  source("src/shap.R", local = TRUE)
 
   output$indicator_variable_selector <- renderUI({
     req(final_physeq())

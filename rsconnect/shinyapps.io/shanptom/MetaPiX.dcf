@@ -1,0 +1,10 @@
+name: MetaPiX
+title: MetaPix
+username: shanptom
+account: shanptom
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 15036331
+bundleId: 10570067
+url: https://shanptom.shinyapps.io/MetaPiX/
+version: 1
