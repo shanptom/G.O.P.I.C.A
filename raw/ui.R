@@ -96,7 +96,10 @@ ui <- fluidPage(
                             sidebarPanel(width = 3,
                               uiOutput("rarefaction_color_selector"),
                               uiOutput("rarefaction_facet_selector"),
-                              sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12)
+                              sliderInput("beta_label_size", "Axis Text Size:", min = 6, max = 20, value = 12),
+                              sliderInput("rarefaction_label_size", "Sample Label Size:", min = 2, max = 10, value = 4),
+                              checkboxInput("show_rarefaction_labels", "Show Sample Labels", value = TRUE),
+                              uiOutput("rarefaction_facet_order_selector")
                             ),
                             mainPanel(width = 9,withSpinner(plotOutput("rarefactionPlot",height = "770px", width = "100%")))
                           )

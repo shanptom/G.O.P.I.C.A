@@ -74,7 +74,7 @@ server <- function(input, output, session) {
       }
       
       # Show success notification
-      showNotification("Files uploaded successfully! ", type = "message", duration = 5)
+      showNotification("Files uplcoaded successfully! ", type = "message", duration = 5)
       
       # Update the navbar to the filter tab
       updateNavbarPage(session, "main_nav", selected = "filter_tab")
@@ -198,6 +198,19 @@ server <- function(input, output, session) {
     categorical_cols <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
     selectInput("rare_facet", "Facet by:", choices = c("None", categorical_cols), selected = "None")
   })
+
+  output$rarefaction_facet_order_selector <- renderUI({
+    req(final_physeq(), input$rare_facet)
+    if (!is.null(input$rare_facet) && input$rare_facet != "None") {
+      df <- as.data.frame(sample_data(final_physeq()))
+      choices <- unique(df[[input$rare_facet]])
+      selectizeInput("rarefaction_facet_order", "Custom Facet Order (drag to reorder):", 
+                     choices = choices, selected = choices, multiple = TRUE, 
+                     options = list(plugins = list('drag_drop')))
+    } else {
+      return(NULL)
+    }
+  })
   
   reorder_factor_column <- function(p, group_var, order_string) {
     if (order_string != "" && group_var %in% colnames(p$data)) {
@@ -217,12 +230,39 @@ server <- function(input, output, session) {
     }
     p <- ggrare(ps, step = 100, color = input$rare_color, label = "Sample", se = FALSE) + theme_minimal()
     if (!is.null(input$rare_facet) && input$rare_facet != "None") {
-      p <- p + facet_wrap(as.formula(paste("~", input$rare_facet)))
+      if (!is.null(input$rarefaction_facet_order) && length(input$rarefaction_facet_order) > 0) {
+        # Apply custom facet order using factor with specified levels
+        # Ensure all levels are included by constructing the formula carefully
+        levels_str <- paste0("c(\"", paste(input$rarefaction_facet_order, collapse = "\", \""), "\")")
+        p <- p + facet_wrap(as.formula(paste0("~factor(", input$rare_facet, ", levels = ", levels_str, ")")), scales = "free")
+      } else {
+        # Default facet without custom order
+        p <- p + facet_wrap(as.formula(paste("~", input$rare_facet)), scales = "free")
+      }
+    }
+    # Remove default geom_text layer if labels are not to be shown
+    if (!input$show_rarefaction_labels) {
+      p$layers <- lapply(p$layers, function(layer) {
+        if (inherits(layer$geom, "GeomText")) {
+          return(NULL)
+        }
+        return(layer)
+      })
+      p$layers <- Filter(Negate(is.null), p$layers)
+    } else {
+      # Override the default label size for sample labels
+      p$layers <- lapply(p$layers, function(layer) {
+        if (inherits(layer$geom, "GeomText")) {
+          layer$aes_params$size <- input$rarefaction_label_size
+        }
+        return(layer)
+      })
     }
     p +
       theme(
         axis.text = element_text(size = input$beta_label_size),
         axis.title = element_text(size = input$beta_label_size),
+        strip.text = element_text(size = input$beta_label_size),
         legend.position = "none"
       )
   })
