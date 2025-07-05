@@ -93,7 +93,7 @@ You can upload your data in two ways:
 ### Option 2: Phyloseq Object
 - **`.rds` file**: A single `.rds` file containing a valid `phyloseq` object.
 
-Sample data is available in the `demo/` directory for testing and learning purposes.
+Sample data is available in the `data/` directory for testing and learning purposes.
 
 ---
 
