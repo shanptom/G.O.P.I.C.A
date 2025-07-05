@@ -8,7 +8,7 @@
 
 ---
 
-##  Demo
+## Demo
 
 A live version of the application is deployed on shinyapps.io.
 
@@ -45,7 +45,7 @@ cd MetaPiX
 ```
 
 ### Step 2: Install Dependencies
-Open the project in RStudio (an RStudio project file is not included). Run the following script from the R console to install all required dependencies:
+Run the following script from the R console to install all required dependencies:
 ```R
 source("scripts/install_dep.R")
 ```
