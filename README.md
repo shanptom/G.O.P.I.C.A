@@ -56,7 +56,7 @@ Once all dependencies are installed, launch the application in one of two ways:
 1. **From RStudio**: Open the `MetaPiX.R` file and click the "Run App" button in the top-right corner of the editor pane.
 2. **From the R Console**:
    ```R
-   shiny::runApp("app.R")
+   shiny::runApp("MetaPiX.R")
    ```
 
 The application will open in a new window or your default web browser.
