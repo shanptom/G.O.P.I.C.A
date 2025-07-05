@@ -1,6 +1,6 @@
 # `MetaPiX`: Interactive Microbial Community Analysis in Shiny
 
-[![License](httpshttps://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![R Shiny](https://img.shields.io/badge/built%20with-R%20Shiny-blue)](https://shiny.rstudio.com/)
 [![Status](https://img.shields.io/badge/status-active-brightgreen)]()
 
@@ -12,7 +12,7 @@
 
 A live version of the application is deployed on shinyapps.io.
 
-**[🚀 Launch MetaPiX Live Demo](https://shanptom.shinyapps.io/MetaPiX/)**
+**[🚀 Launch MetaPiX](https://shanptom.shinyapps.io/MetaPiX/)**
 
 ---
 ## 🚀 Features
