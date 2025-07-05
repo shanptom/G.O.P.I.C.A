@@ -8,7 +8,12 @@ library(plotly)
 ui <- fluidPage(
   useShinyjs(),
   tags$head(
-    tags$link(rel = "icon", type = "image/png", href = "favicon.png")
+    tags$link(rel = "icon", type = "image/png", href = "favicon.png"),
+    tags$script(HTML("
+      $(document).ready(function(){
+        $('[data-toggle=\"tooltip\"]').tooltip();
+      });
+    "))
   ),
   navbarPage("MetaPix",
                  id = "main_nav",
@@ -59,10 +64,10 @@ ui <- fluidPage(
                         )
                       )
              ),
-                tabPanel("User Guide",
+                tabPanel("User Manual",
                       fluidRow(
                         column(10, offset = 1,
-                               includeMarkdown("user_guide.md")
+                               includeMarkdown("docs/user_guide.md")
                         )
                       )
              ),
@@ -72,7 +77,13 @@ ui <- fluidPage(
                               fileInput("asv", "Upload Count Table (CSV)", accept = ".csv"),
                               fileInput("tax", "Upload Taxonomy Table (CSV)", accept = ".csv"),
                               fileInput("meta", "Upload Metadata Table (CSV)", accept = ".csv"),
-                              fileInput("phylo", "Or Upload Phyloseq Object (.rds)", accept = ".rds")
+                              fileInput("phylo", "Or Upload Phyloseq Object (.rds)", accept = ".rds"),
+                              hr(),
+                              h4("Load Demo Data"),
+                              selectInput("demo_file", "Select Demo Dataset:", 
+                                          choices = c("Phyloseq RDS (demo_ps.rds)" = "rds", 
+                                                      "CSV Set (demo_asv.csv, demo_meta.csv, demo_tax.csv)" = "csv")),
+                              actionButton("load_demo", "Load Demo Data")
                             ),
                             mainPanel(width = 9,
                                       uiOutput("upload_status_ui")
@@ -99,7 +110,16 @@ ui <- fluidPage(
                               sliderInput("beta_label_size", "Axis Text Size:", min = 6, max = 20, value = 12),
                               sliderInput("rarefaction_label_size", "Sample Label Size:", min = 2, max = 10, value = 4),
                               checkboxInput("show_rarefaction_labels", "Show Sample Labels", value = TRUE),
-                              uiOutput("rarefaction_facet_order_selector")
+                              div(
+                                style = "display: flex; align-items: center;",
+                                uiOutput("rarefaction_facet_order_selector"),
+                                tags$span(
+                                  tags$i(class = "fas fa-info-circle", style = "margin-left: 5px; cursor: pointer;"),
+                                  `data-toggle` = "tooltip",
+                                  `data-placement` = "right",
+                                  `title` = "Drag to reorder facets as they appear on the plot."
+                                )
+                              )
                             ),
                             mainPanel(width = 9,withSpinner(plotOutput("rarefactionPlot",height = "770px", width = "100%")))
                           )
@@ -110,11 +130,29 @@ ui <- fluidPage(
                           radioButtons("abund_plot_type", "Plot Type:",
                                        choices = c("Bar" = "bar", "Line" = "line", "Heatmap" = "heat"),
                                        selected = "bar"),
-                          uiOutput("tax_rank_selector"),
+                          div(
+                            style = "display: flex; align-items: center;",
+                            uiOutput("tax_rank_selector"),
+                            tags$span(
+                              tags$i(class = "fas fa-info-circle", style = "margin-left: 5px; cursor: pointer;"),
+                              `data-toggle` = "tooltip",
+                              `data-placement` = "right",
+                              `title` = "Select the taxonomic level for abundance analysis (e.g., Phylum, Genus)."
+                            )
+                          ),
                           sliderInput("ntaxa", "Number of Top Taxa:", min = 5, max = 15, value = 8, step = 1),
                           uiOutput("abundance_facet_selector"),
                           
-                          uiOutput("abundance_order_selector"),
+                          div(
+                            style = "display: flex; align-items: center;",
+                            uiOutput("abundance_order_selector"),
+                            tags$span(
+                              tags$i(class = "fas fa-info-circle", style = "margin-left: 5px; cursor: pointer;"),
+                              `data-toggle` = "tooltip",
+                              `data-placement` = "right",
+                              `title` = "Drag to reorder facets or samples as they appear on the plot."
+                            )
+                          ),
                           
                           sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12),
                           checkboxInput("flip_abundance", "Flip axes (horizontal plot)", value = FALSE)
@@ -132,7 +170,16 @@ ui <- fluidPage(
                               uiOutput("alpha_group_selector"),
                               uiOutput("alpha_colour_selector"),
                               checkboxInput("flip_alpha", "Flip axes (horizontal plot)", value = FALSE),
-                              uiOutput("alpha_order_selector"),
+                              div(
+                                style = "display: flex; align-items: center;",
+                                uiOutput("alpha_order_selector"),
+                                tags$span(
+                                  tags$i(class = "fas fa-info-circle", style = "margin-left: 5px; cursor: pointer;"),
+                                  `data-toggle` = "tooltip",
+                                  `data-placement` = "right",
+                                  `title` = "Drag to reorder groups or samples as they appear on the plot."
+                                )
+                              ),
                               sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12)
                             ),
                             mainPanel(width = 9,withSpinner(plotOutput("alphaPlot",height = "770px", width = "100%")))
@@ -147,7 +194,8 @@ ui <- fluidPage(
                                                              "kulczynski", "jaccard", "gower", "altGower", "morisita",
                                                              "horn", "mountford", "raup", "binomial", "chao", "cao", "mahalanobis"),
                                                  selected = "bray"),
-                                     sliderInput("dend_label_size", "Label size:", min = 3, max = 10, value = 5, step = 1)
+                                     sliderInput("dend_label_size", "Label Size:", min = 3, max = 10, value = 5, step = 1),
+                                     sliderInput("dend_text_size", "Text Size:", min = 6, max = 20, value = 12)
                         ),
                         
                         mainPanel(width = 9,withSpinner(plotOutput("dendrogramPlot", height = "770px", width = "100%"))))
@@ -171,6 +219,7 @@ ui <- fluidPage(
                               uiOutput("beta_shape_selector"),
                               uiOutput("beta_label_selector"),
                               uiOutput("beta_facet_selector"),
+                              uiOutput("beta_facet_order_selector"),
                               sliderInput("beta_label_size", "Axis Text Size:", min = 6, max = 20, value = 12),
                               sliderInput("beta_label_text_size", "Label Text Size:", min = 2, max = 15, value = 3),
                               sliderInput("beta_shape_size", "Shape Size:", min = 1, max = 10, value = 4),

@@ -74,7 +74,7 @@ server <- function(input, output, session) {
       }
       
       # Show success notification
-      showNotification("Files uplcoaded successfully! ", type = "message", duration = 5)
+      showNotification("Files uploaded successfully!", type = "message", duration = 5)
       
       # Update the navbar to the filter tab
       updateNavbarPage(session, "main_nav", selected = "filter_tab")
@@ -105,21 +105,58 @@ server <- function(input, output, session) {
       
       return(h4("Upload successful. Please proceed to the next tabs."))
     } else {
-      return(h4("Waiting for file uploads..."))
+      return(h4("Waiting for file uploads or demo data loading..."))
     }
+  })
+  
+  # Handle loading of demo data
+  observeEvent(input$load_demo, {
+    demo_path <- "data/"
+    if (input$demo_file == "rds") {
+      phy <- readRDS(file.path(demo_path, "demo_ps.rds"))
+      final_physeq(phy)
+      df <- as.data.frame(sample_data(phy))
+      showNotification("Demo Phyloseq RDS loaded successfully!", type = "message", duration = 5)
+    } else if (input$demo_file == "csv") {
+      otu <- read.csv(file.path(demo_path, "demo_asv.csv"), row.names = 1)
+      tax <- as.matrix(read.csv(file.path(demo_path, "demo_tax.csv"), row.names = 1))
+      meta <- read.csv(file.path(demo_path, "demo_meta.csv"), row.names = 1)
+      ps <- phyloseq(
+        otu_table(as.matrix(otu), taxa_are_rows = TRUE),
+        tax_table(tax),
+        sample_data(meta)
+      )
+      final_physeq(ps)
+      df <- as.data.frame(sample_data(ps))
+      showNotification("Demo CSV files loaded successfully!", type = "message", duration = 5)
+    }
+    
+    # Enable analysis tabs
+    for(tab in analysis_tabs) {
+      shinyjs::enable(selector = paste0("a[data-value='", tab, "']"))
+    }
+    
+    # Update the navbar to the filter tab
+    updateNavbarPage(session, "main_nav", selected = "filter_tab")
+    
+    # Reset ordering rules
+    for (var in colnames(df)) {
+      if (is.character(df[[var]]) || is.factor(df[[var]])) ordering_rules[[var]] <- unique(df[[var]])
+    }
+    ordering_rules$Sample <- sample_names(final_physeq())
   })
   
   
   output$taxa_filters <- renderUI({
-    req(raw_physeq())
-    ranks <- colnames(as.data.frame(tax_table(raw_physeq())))
+    req(final_physeq())
+    ranks <- colnames(as.data.frame(tax_table(final_physeq())))
     lapply(ranks, function(rank) {
       textInput(paste0("filter_", rank), paste("Exclude", rank, "(comma-separated):"), "")
     })
   })
   
   observeEvent(input$apply_filter, {
-    ps <- raw_physeq()
+    ps <- final_physeq()
     taxdf <- as.data.frame(tax_table(ps))
     ranks <- colnames(taxdf)
     to_remove <- rep(FALSE, ntaxa(ps))
@@ -220,19 +257,35 @@ server <- function(input, output, session) {
     return(p)
   }
   
-  output$rarefactionPlot <- renderPlot({
-    req(final_physeq(), input$rare_color)
+  # Store the base rarefaction plot object to avoid recalculation
+  base_rarefaction_plot <- reactiveVal(NULL)
+  
+  observe({
+    req(final_physeq())
     ps <- final_physeq()
     otu_table(ps) <- otu_table(round(otu_table(ps)), taxa_are_rows = TRUE)
     if (any(sample_sums(ps) == 0)) {
       showNotification("Some samples have 0 counts. Rarefaction plot may not work.", type = "error")
+      base_rarefaction_plot(NULL)
+    } else {
+      # Create the base plot without color or other aesthetics that might change
+      base_plot <- ggrare(ps, step = 100, label = "Sample", se = FALSE) + theme_minimal()
+      base_rarefaction_plot(base_plot)
+    }
+  })
+  
+  output$rarefactionPlot <- renderPlot({
+    req(base_rarefaction_plot(), input$rare_color)
+    p <- base_rarefaction_plot()
+    if (is.null(p)) {
       return(NULL)
     }
-    p <- ggrare(ps, step = 100, color = input$rare_color, label = "Sample", se = FALSE) + theme_minimal()
+    # Apply color aesthetic dynamically
+    p <- p + aes(color = !!sym(input$rare_color))
+    
     if (!is.null(input$rare_facet) && input$rare_facet != "None") {
       if (!is.null(input$rarefaction_facet_order) && length(input$rarefaction_facet_order) > 0) {
         # Apply custom facet order using factor with specified levels
-        # Ensure all levels are included by constructing the formula carefully
         levels_str <- paste0("c(\"", paste(input$rarefaction_facet_order, collapse = "\", \""), "\")")
         p <- p + facet_wrap(as.formula(paste0("~factor(", input$rare_facet, ", levels = ", levels_str, ")")), scales = "free")
       } else {
@@ -507,6 +560,19 @@ p4$data$Sample <- droplevels(p4$data$Sample)
     categorical_cols <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
     selectInput("beta_facet", "Facet by:", choices = c("None", categorical_cols), selected = "None")
   })
+
+  output$beta_facet_order_selector <- renderUI({
+    req(final_physeq(), input$beta_facet)
+    if (!is.null(input$beta_facet) && input$beta_facet != "None") {
+      df <- as.data.frame(sample_data(final_physeq()))
+      choices <- unique(df[[input$beta_facet]])
+      selectizeInput("beta_facet_order", "Custom Facet Order (drag to reorder):", 
+                     choices = choices, selected = choices, multiple = TRUE, 
+                     options = list(plugins = list('drag_drop')))
+    } else {
+      return(NULL)
+    }
+  })
   
   
   
@@ -540,6 +606,9 @@ p4$data$Sample <- droplevels(p4$data$Sample)
     
 
     if (!is.null(input$beta_facet) && input$beta_facet != "None") {
+      if (!is.null(input$beta_facet_order) && length(input$beta_facet_order) > 0) {
+        p$data[[input$beta_facet]] <- factor(p$data[[input$beta_facet]], levels = input$beta_facet_order)
+      }
       p <- p + facet_wrap(as.formula(paste("~", input$beta_facet)))
     }
     
@@ -637,6 +706,11 @@ p4$data$Sample <- droplevels(p4$data$Sample)
       treatment = input$dend_treatment,
       method = input$dend_method,
       label_size = input$dend_label_size
+    )
+    
+    dend <- dend + theme(
+      axis.text = element_text(size = input$dend_text_size),
+      axis.title = element_text(size = input$dend_text_size)
     )
     
     dend
@@ -988,6 +1062,12 @@ p4$data$Sample <- droplevels(p4$data$Sample)
     group_val <- if (input$group == "None") NULL else input$group
     
     # Generate plot using plot_scatterfit()
+    # Extract the last taxon name from input$selected_taxon (format: K_Taxa1|p_Taxa2|...)
+    taxon_parts <- unlist(strsplit(input$selected_taxon, "|", fixed = TRUE))
+    last_taxon <- tail(taxon_parts, 1)
+    # Remove prefix like x__ from the last taxon (e.g., c__ from c__Bacilli)
+    last_taxon <- sub("^[a-zA-Z]__", "", last_taxon)
+    
     p <- env_obj$plot_scatterfit(
       x = lineage_vector,
       y = input$env_var,
@@ -998,7 +1078,7 @@ p4$data$Sample <- droplevels(p4$data$Sample)
       line_color = "#2A0E3C",
       line_se_color = "#A87CA0",
       label.x.npc = "left", label.y.npc = "top",
-      x_axis_title = input$selected_taxon,
+      x_axis_title = last_taxon,
       y_axis_title = input$env_var
     ) + theme_classic() + 
     theme(
@@ -1013,7 +1093,7 @@ p4$data$Sample <- droplevels(p4$data$Sample)
   })
   
   # Indicator Species Analysis Server Logic
-  source("shap-phyloseq.R", local = TRUE)
+  source("src/shap-phyloseq.R", local = TRUE)
 
   output$indicator_variable_selector <- renderUI({
     req(final_physeq())

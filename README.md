@@ -1,76 +1,123 @@
 # `MetaPiX`: Interactive Microbial Community Analysis in Shiny
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](httpshttps://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![R Shiny](https://img.shields.io/badge/built%20with-R%20Shiny-blue)](https://shiny.rstudio.com/)
 [![Status](https://img.shields.io/badge/status-active-brightgreen)]()
 
-`MetaPiX` is an interactive R Shiny application for microbial community data exploration. Built for researchers analyzing high-throughput sequencing data (e.g., 16S/18S rRNA metabarcoding), `MetaPiX` offers a no-code interface to perform filtering, diversity analysis, regression, ordination, and reporting — all in your browser.
+`MetaPiX` is an interactive R Shiny application for exploring microbial community data. Designed for researchers analyzing high-throughput sequencing data (e.g., 16S/18S rRNA metabarcoding), `MetaPiX` provides a no-code interface to perform filtering, diversity analysis, ordination, and more—all from your web browser. This approach eliminates the need for programming expertise, making complex microbiome analysis accessible to a wider audience by simplifying the handling of intricate datasets.
 
 ---
 
+##  Demo
+
+A live version of the application is deployed on shinyapps.io.
+
+**[🚀 Launch MetaPiX Live Demo](https://shanptom.shinyapps.io/MetaPiX/)**
+
+---
 ## 🚀 Features
 
-- **Upload Data**: Load ASV, taxonomy, and metadata tables or a pre-built phyloseq `.rds` object.
-- **Filtering**: Remove taxa, apply rarefaction, or normalize using TSS.
-- **Alpha & Beta Diversity**: Plot Shannon, Simpson, NMDS, PCoA, PERMANOVA, etc.
-- **Abundance Analysis**: Bar plots, heatmaps, and alluvial plots by taxonomic rank.
-- **Dendrograms**: Visualize hierarchical clustering of samples.
-- **Rarefaction**: Assess sequencing depth across samples.
-- **Metadata Analysis**: Perform constrained ordination (RDA/CCA/dbRDA), correlations, and Mantel tests.
-- **Regression**: Relate taxa abundance to environmental variables using `microeco` models.
+### Data Input & Processing
+- **Flexible Data Upload**: Load your data as ASV, taxonomy, and metadata tables (CSV) or as a pre-built `phyloseq` `.rds` object.
+- **Data Filtering**: Interactively remove unwanted taxa and apply normalization (TSS) or rarefaction.
+
+### Analysis & Visualization
+- **Alpha & Beta Diversity**: Generate plots for Shannon, Simpson, Chao1, and more. Perform PERMANOVA tests on beta diversity.
+- **Ordination**: Visualize community structure using NMDS, PCoA, RDA, CCA, and t-SNE.
+- **Abundance Analysis**: Create bar plots, heatmaps, and alluvial plots by taxonomic rank.
+- **Metadata Analysis**: Run constrained ordination (RDA/CCA/dbRDA), correlation analysis, and Mantel tests to link environmental variables to community composition.
+- **Regression**: Relate individual taxon abundances to metadata variables.
+- **Hierarchical Clustering**: Build dendrograms to visualize sample similarity.
 
 ---
 
-## 📂 Input Requirements
+## 📂 Getting Started
 
-You can upload:
+### Prerequisites
+- R (version 4.0 or later)
+- RStudio (recommended for an optimal experience)
 
-### Option 1: CSVs
-- **ASV Table**: rows = taxa, columns = samples.
-- **Taxonomy Table**: rows = taxa, columns = ranks (Kingdom → Species).
-- **Metadata Table**: rows = samples, columns = metadata variables.
+### Step 1: Clone the Repository
+Clone this repository to your local machine to get started:
+```bash
+git clone https://github.com/shanptom/MetaPiX.git
+cd MetaPiX
+```
 
-### Option 2: `.rds` file
-- A valid `phyloseq` object created using the `phyloseq` package.
+### Step 2: Install Dependencies
+Open the `metaX.Rproj` file in RStudio. Run the following script from the R console to install all required dependencies:
+```R
+source("install_dep.R")
+```
+This script will install packages from CRAN, Bioconductor, and GitHub. If you encounter installation issues, check package compatibility or consult the GitHub issues page for troubleshooting tips.
+
+### Step 3: Run the Application
+Once all dependencies are installed, launch the application in one of two ways:
+1. **From RStudio**: Open the `MetaPiX.R` file and click the "Run App" button in the top-right corner of the editor pane.
+2. **From the R Console**:
+   ```R
+   shiny::runApp("MetaPiX.R")
+   ```
+
+The application will open in a new window or your default web browser.
+
+---
+
+## 💾 Input Data Requirements
+
+You can upload your data in two ways:
+
+### Option 1: CSV Files
+- **ASV/OTU Table**: A CSV file where rows are taxa and columns are samples. The first column should contain the taxon names/IDs.
+  - **Example Format**:
+    | Taxon_ID | Sample1 | Sample2 | Sample3 |
+    |----------|---------|---------|---------|
+    | Taxon1   | 100     | 50      | 75      |
+    | Taxon2   | 30      | 20      | 10      |
+
+- **Taxonomy Table**: A CSV file where rows are taxa and columns are taxonomic ranks (e.g., Kingdom, Phylum, Class, Order, Family, Genus, Species). The first column must match the taxon names/IDs from the ASV table.
+  - **Example Format**:
+    | Taxon_ID | Kingdom  | Phylum          | Class              | Order             | Family              | Genus         | Species      |
+    |----------|----------|-----------------|--------------------|-------------------|---------------------|---------------|--------------|
+    | Taxon1   | Bacteria | Proteobacteria  | Gammaproteobacteria| Enterobacteriales | Enterobacteriaceae  | Escherichia   | coli         |
+    | Taxon2   | Bacteria | Firmicutes      | Bacilli            | Bacillales        | Bacillaceae         | Bacillus      | subtilis     |
+
+- **Metadata Table**: A CSV file where rows are samples and columns are metadata variables. The first column must contain the sample names, matching the sample names in the ASV table.
+  - **Example Format**:
+    | Sample_ID | Location | Depth | Temperature |
+    |-----------|----------|-------|-------------|
+    | Sample1   | SiteA    | 10    | 25.5        |
+    | Sample2   | SiteB    | 15    | 22.0        |
+    | Sample3   | SiteC    | 8     | 23.5        |
+
+### Option 2: Phyloseq Object
+- **`.rds` file**: A single `.rds` file containing a valid `phyloseq` object.
+
+Sample data is available in the `demo/` directory for testing and learning purposes.
 
 ---
 
 ## 🔧 Normalization Options
 
-- **None**: Use raw counts.
-- **Rarefaction**: Subsample each sample to a common read depth.
-- **TSS**: Total Sum Scaling normalization.
-
----
-
-
-
-## 📦 Dependencies
-
-`MetaPiX` relies on the following R packages:
-
-- `shiny`, `shinyjs`, `shinyBS`, `shinycssloaders`
-- `phyloseq`, `microeco`, `phylosmith`
-- `ggplot2`, `RColorBrewer`, `ggcor`
-- `vegan`, `ranacapa`, `microbiome`
-- `rmarkdown`, `knitr`
+- **None**: Use raw counts (default). Suitable when you want to analyze original data without transformation.
+- **Rarefaction**: Subsample all samples to a common read depth. Useful for comparing diversity across samples with varying sequencing depths.
+- **TSS**: Total Sum Scaling, which transforms counts to relative abundances. Ideal for comparing proportional differences between taxa.
 
 ---
 
 ## 🧠 How It Works
 
-`MetaPiX` wraps around powerful microbiome R tools using a modular backend:
-- Uses `microeco`'s object-oriented classes for ordination, correlation, regression, and visualization.
-- Converts all CSVs into a `phyloseq` object, which is passed through your workflow.
-- Stores user inputs and plots reactively.
+`MetaPiX` combines several powerful tools behind the scenes to make microbiome analysis straightforward. It's a modular Shiny application built on top of leading R packages from the microbiome analysis ecosystem.
+
+- It uses `phyloseq` as the core data structure, seamlessly converting all user-uploaded CSVs into a `phyloseq` object for analysis.
+- For advanced analysis and visualization (e.g., ordination, correlation, regression), it leverages the robust classes from the `microeco` package.
+- The user interface is crafted with `shiny` and `bslib` for a smooth experience, with plots generated primarily using `ggplot2` and `phylosmith`.
 
 ---
 
-## 👨‍💻 Contact
+## 🤝 Contact & Contributions
 
-
-
-For feedback or feature suggestions, feel free to open an issue or contact the developer.
+For feedback, bug reports, or feature suggestions, please [open an issue](https://github.com/shanptom/MetaPiX/issues) on the GitHub repository.
 
 ---
 
@@ -80,16 +127,14 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ---
 
-## 📚 References
+## 📚 Citation
 
 If you use `MetaPiX` in a publication, please cite the underlying R packages that power the app:
 
-- McMurdie & Holmes (2013). *phyloseq: An R package for reproducible interactive analysis and graphics of microbiome census data*. PLoS ONE.
-- Liu et al. (2021). *microeco: an R package for data mining in microbial community ecology*. bioRxiv.
-- Dixon (2003). *VEGAN, a package of R functions for community ecology*. Journal of Vegetation Science.
-- Wickham (2016). *ggplot2: Elegant Graphics for Data Analysis*. Springer.
+- **phyloseq**: McMurdie & Holmes (2013). *phyloseq: An R package for reproducible interactive analysis and graphics of microbiome census data*. PLoS ONE.
+- **microeco**: Liu et al. (2021). *microeco: an R package for data mining in microbial community ecology*. bioRxiv.
+- **phylosmith**: Smith (2021). *phylosmith: An R-package for reproducible and efficient microbiome analysis with phyloseq-objects*. Journal of Open Source Software.
+- **VEGAN**: Dixon (2003). *VEGAN, a package of R functions for community ecology*. Journal of Vegetation Science.
+- **ggplot2**: Wickham (2016). *ggplot2: Elegant Graphics for Data Analysis*. Springer.
 
-We also acknowledge the use of:
-- `shiny`, `shinyjs`, `ggcor`, `RColorBrewer`, `phylosmith`, `ranacapa`,  and other CRAN/Bioconductor packages associated with the above ones.
-
-
+We also acknowledge the extensive use of `shiny`, `shinyjs`, `ggcor`, `RColorBrewer`, `ranacapa`, and other essential packages that form the foundation of this tool.

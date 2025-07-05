@@ -3,8 +3,8 @@
 # It sources the UI and server logic from separate files and launches the app.
 
 # Source the UI and Server components
-source("ui.R")
-source("server.R")
+source("src/ui.R")
+source("src/server.R")
 
 # Launch the Shiny App
 shinyApp(ui = ui, server = server)

@@ -1,7 +1,7 @@
 
 cran_pkgs <- c("shiny", "shinyBS", "shinyjs", "shinycssloaders", "bslib",
                "ggplot2", "vegan", "microeco", "file2meco", "GUniFrac",
-               "RColorBrewer", "ggalluvial", "dplyr", "ggpubr")
+               "RColorBrewer", "ggalluvial", "dplyr", "ggpubr", "xgboost", "SHAPforxgboost")
 
 
 installed <- rownames(installed.packages())
