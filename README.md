@@ -45,9 +45,9 @@ cd MetaPiX
 ```
 
 ### Step 2: Install Dependencies
-Open the `metaX.Rproj` file in RStudio. Run the following script from the R console to install all required dependencies:
+Open the project in RStudio (an RStudio project file is not included). Run the following script from the R console to install all required dependencies:
 ```R
-source("install_dep.R")
+source("scripts/install_dep.R")
 ```
 This script will install packages from CRAN, Bioconductor, and GitHub. If you encounter installation issues, check package compatibility or consult the GitHub issues page for troubleshooting tips.
 
