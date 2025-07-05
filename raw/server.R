@@ -21,7 +21,7 @@ server <- function(input, output, session) {
   show_tsne <- reactiveVal(FALSE)
   
   # Initially disable all analysis tabs
-  analysis_tabs <- c("filter_tab", "rarefaction_tab", "abundance_tab", "alpha_tab", "dendrogram_tab", "ordination_tab", "metadata_tab", "regression_tab")
+  analysis_tabs <- c("filter_tab", "rarefaction_tab", "abundance_tab", "alpha_tab", "dendrogram_tab", "ordination_tab", "metadata_tab", "regression_tab", "indicator_tab")
   
   observe({
     for(tab in analysis_tabs) {
@@ -74,7 +74,7 @@ server <- function(input, output, session) {
       }
       
       # Show success notification
-      showNotification("Files uploaded successfully! You can now proceed to the 'Filter' tab.", type = "message", duration = 5)
+      showNotification("Files uploaded successfully! ", type = "message", duration = 5)
       
       # Update the navbar to the filter tab
       updateNavbarPage(session, "main_nav", selected = "filter_tab")
@@ -147,17 +147,6 @@ server <- function(input, output, session) {
     }
   })
   
-  observeEvent(input$skip_filter, {
-    ps <- raw_physeq()
-    df <- as.data.frame(sample_data(ps))
-    for (var in colnames(df)) {
-      if (is.character(df[[var]]) || is.factor(df[[var]])) ordering_rules[[var]] <- unique(df[[var]])
-    }
-    ordering_rules$Sample <- sample_names(ps)
-    final_physeq(ps)
-    showNotification("Skipped filtering. Using raw data.", type = "message")
-  })
-  
   observeEvent(input$go_analysis, {
     req(final_physeq())
     ps <- final_physeq()
@@ -198,14 +187,16 @@ server <- function(input, output, session) {
   
   output$rarefaction_color_selector <- renderUI({
     req(final_physeq())
-    cols <- colnames(sample_data(final_physeq()))
-    selectInput("rare_color", "Color by:", choices = cols, selected = cols[1])
+    df <- as.data.frame(sample_data(final_physeq()))
+    categorical_cols <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
+    selectInput("rare_color", "Color by:", choices = categorical_cols, selected = categorical_cols[1] %||% "None")
   })
   
   output$rarefaction_facet_selector <- renderUI({
     req(final_physeq())
-    cols <- colnames(sample_data(final_physeq()))
-    selectInput("rare_facet", "Facet by:", choices = c("None", cols), selected = "None")
+    df <- as.data.frame(sample_data(final_physeq()))
+    categorical_cols <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
+    selectInput("rare_facet", "Facet by:", choices = c("None", categorical_cols), selected = "None")
   })
   
   reorder_factor_column <- function(p, group_var, order_string) {
@@ -244,8 +235,9 @@ server <- function(input, output, session) {
   
   output$abundance_facet_selector <- renderUI({
     req(final_physeq())
-    meta_cols <- colnames(sample_data(final_physeq()))
-    selectInput("abund_facet", "Facet by:", choices = c("None", meta_cols), selected = "None")
+    df <- as.data.frame(sample_data(final_physeq()))
+    categorical_cols <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
+    selectInput("abund_facet", "Facet by:", choices = c("None", categorical_cols), selected = "None")
   })
   
   output$abundance_plot_output <- renderUI({
@@ -348,16 +340,18 @@ server <- function(input, output, session) {
   
   output$alpha_group_selector <- renderUI({
     req(final_physeq())
-    meta_cols <- colnames(sample_data(final_physeq()))
+    df <- as.data.frame(sample_data(final_physeq()))
+    categorical_cols <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
     selectInput("alpha_group", "Group by:",
-                choices = c("None", meta_cols),
+                choices = c("None", categorical_cols),
                 selected = "None")
   })
   
   output$alpha_colour_selector <- renderUI({
     req(final_physeq())
-    meta_cols <- colnames(sample_data(final_physeq()))
-    selectInput("alpha_colour", "Colour",  choices = c("None", meta_cols),
+    df <- as.data.frame(sample_data(final_physeq()))
+    categorical_cols <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
+    selectInput("alpha_colour", "Colour", choices = c("None", categorical_cols),
                 selected = "None")
   })
   
@@ -403,14 +397,16 @@ server <- function(input, output, session) {
   
   output$beta_color_selector <- renderUI({
     req(final_physeq())
-    cols <- colnames(sample_data(final_physeq()))
-    selectInput("beta_color", "Color by:", choices = c("None", cols), selected = "None")
+    df <- as.data.frame(sample_data(final_physeq()))
+    categorical_cols <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
+    selectInput("beta_color", "Color by:", choices = c("None", categorical_cols), selected = "None")
   })
   
   output$beta_shape_selector <- renderUI({
     req(final_physeq())
-    cols <- colnames(sample_data(final_physeq()))
-    selectInput("beta_shape", "Shape by:", choices = c("None", cols), selected = "None")
+    df <- as.data.frame(sample_data(final_physeq()))
+    categorical_cols <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
+    selectInput("beta_shape", "Shape by:", choices = c("None", categorical_cols), selected = "None")
   })
   
   output$beta_label_selector <- renderUI({
@@ -421,20 +417,21 @@ server <- function(input, output, session) {
   
   output$beta_facet_selector <- renderUI({
     req(final_physeq())
-    cols <- colnames(sample_data(final_physeq()))
-    selectInput("beta_facet", "Facet by:", choices = c("None", cols), selected = "None")
+    df <- as.data.frame(sample_data(final_physeq()))
+    categorical_cols <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
+    selectInput("beta_facet", "Facet by:", choices = c("None", categorical_cols), selected = "None")
   })
   
   
   
-  output$betaPlot <- renderPlotly({
+  output$betaPlot <- renderPlot({
     req(final_physeq())
     
     dist <- distance(final_physeq(), method = input$beta_dist)
     ord <- ordinate(final_physeq(), method = input$beta_ord, distance = dist)
     
     p <- plot_ordination(final_physeq(), ord, 
-                         color = input$beta_color, 
+                         color = if (input$beta_color != "None") input$beta_color else NULL, 
                          shape = if (input$beta_shape != "None") input$beta_shape else NULL) +
       theme_minimal() +
       geom_point(size = input$beta_shape_size)
@@ -460,14 +457,16 @@ server <- function(input, output, session) {
       p <- p + facet_wrap(as.formula(paste("~", input$beta_facet)))
     }
     
-    ggplotly(p)
+    p
   })
   
   output$permanova_group_selector <- renderUI({
     req(final_physeq())
+    df <- as.data.frame(sample_data(final_physeq()))
+    categorical_cols <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
     selectInput("permanova_group", "Select grouping variable:",
-                choices = names(sample_data(final_physeq())),
-                selected = names(sample_data(final_physeq()))[1])
+                choices = categorical_cols,
+                selected = categorical_cols[1] %||% "None")
   })
   
   permanova_result <- reactiveVal()
@@ -537,9 +536,11 @@ server <- function(input, output, session) {
   
   output$dend_treatment_selector <- renderUI({
     req(final_physeq())
+    df <- as.data.frame(sample_data(final_physeq()))
+    categorical_cols <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
     selectInput("dend_treatment", "Select metadata column for grouping:",
-                choices = names(sample_data(final_physeq())),
-                selected = names(sample_data(final_physeq()))[1])
+                choices = categorical_cols,
+                selected = categorical_cols[1] %||% "None")
   })
   
   output$dendrogramPlot <- renderPlot({
@@ -557,9 +558,12 @@ server <- function(input, output, session) {
   
   output$tsne_group_selector <- renderUI({
     req(final_physeq())
+    df <- as.data.frame(sample_data(final_physeq()))
+    categorical_cols <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
+    selected_val <- if (length(categorical_cols) >= 2) categorical_cols[2] else categorical_cols[1] %||% "None"
     selectInput("tsne_group", "Group samples by:",
-                choices = names(sample_data(final_physeq())),
-                selected = names(sample_data(final_physeq()))[2])
+                choices = categorical_cols,
+                selected = selected_val)
   })
   
   
@@ -571,13 +575,15 @@ server <- function(input, output, session) {
     max_perplexity <- max(5, min(max_perplexity, 50))  # reasonable bounds
     
     sliderInput("tsne_perplexity", "Perplexity:",
-                min = 0, max = max_perplexity, value = min(10, max_perplexity))
+                min = 0, max = max_perplexity, value = 2)
   })
   
   output$tsne_label_selector <- renderUI({
     req(final_physeq())
+    df <- as.data.frame(sample_data(final_physeq()))
+    categorical_cols <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
     selectInput("tsne_label", "Label samples by:",
-                choices = c("None", names(sample_data(final_physeq()))),
+                choices = c("None", categorical_cols),
                 selected = "None")
   })
   
@@ -656,8 +662,8 @@ server <- function(input, output, session) {
         wellPanel(
           checkboxInput("adjust_arrow_length", "Adjust Arrow Length", TRUE),
           sliderInput("max_perc_env", "Max Percentage of Explained Env Fit (arrows)", min = 0.05, max = 1, value = 0.3, step = 0.05),
-          selectInput("rda_color", "Color by:", choices = factor_vars, selected = factor_vars[1]),
-          selectInput("rda_shape", "Point Shape", choices = factor_vars, selected = factor_vars[1]),
+          selectInput("rda_color", "Color by:", choices = factor_vars, selected = factor_vars[1] %||% "None"),
+          selectInput("rda_shape", "Point Shape", choices = factor_vars, selected = factor_vars[1] %||% "None"),
           selectInput("rda_label", "Sample Labels:", choices = c("None", names(sample_meta)), selected = "None"),
           sliderInput("rda_textsize", "Text Size", value = 6, min = 6, max = 15, step = 1)
         )
@@ -676,7 +682,7 @@ server <- function(input, output, session) {
       conditionalPanel(
         condition = "output.analysis_mode == 'mantel'",
         wellPanel(
-          selectInput("mantel_group", "Group By:", choices = names(sample_data(final_physeq())), selected = names(sample_data(final_physeq()))[1]),
+          selectInput("mantel_group", "Group By:", choices = factor_vars, selected = factor_vars[1] %||% "None"),
           actionButton("run_mantel_analysis", "Run Mantel Test")
         )
       )
@@ -868,8 +874,9 @@ server <- function(input, output, session) {
   
   output$regression_group_selector <- renderUI({
     req(final_physeq())
-    meta_cols <- colnames(sample_data(final_physeq()))
-    selectInput("group", "Group by:", choices = c("None", meta_cols), selected = "None")
+    df <- as.data.frame(sample_data(final_physeq()))
+    categorical_cols <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
+    selectInput("group", "Group by:", choices = c("None", categorical_cols), selected = "None")
   })
   
   
@@ -917,8 +924,9 @@ server <- function(input, output, session) {
 
   output$indicator_variable_selector <- renderUI({
     req(final_physeq())
-    meta_cols <- colnames(sample_data(final_physeq()))
-    selectInput("indicator_var", "Select Metadata Variable:", choices = meta_cols)
+    df <- as.data.frame(sample_data(final_physeq()))
+    categorical_cols <- names(df)[sapply(df, function(x) is.character(x) || is.factor(x))]
+    selectInput("indicator_var", "Select Metadata Variable:", choices = categorical_cols)
   })
 
   output$indicator_group1_selector <- renderUI({

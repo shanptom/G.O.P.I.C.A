@@ -82,7 +82,6 @@ ui <- fluidPage(
                  tabPanel("Filter", value = "filter_tab",
                           sidebarLayout(
                             sidebarPanel(width = 3,
-                              checkboxInput("skip_filter", "Skip Filtering"),
                               checkboxInput("doRarefy", "Apply rarefaction", value = FALSE),
                               checkboxInput("doTSS", "Normalize by TSS", value = FALSE),
                               uiOutput("taxa_filters"),
@@ -205,7 +204,7 @@ ui <- fluidPage(
                         mainPanel(width = 9,
                                   conditionalPanel(
                                     condition = "!output.show_tsne_flag",
-                                    withSpinner(plotlyOutput("betaPlot", height = "770px", width = "100%"))
+                                    withSpinner(plotOutput("betaPlot", height = "770px", width = "100%"))
                                   ),
                                   conditionalPanel(
                                     condition = "output.show_tsne_flag",
