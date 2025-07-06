@@ -1,13 +1,13 @@
-# MetaPiX 
+# GOPICA
 
-**MetaPiX** is an interactive Shiny application for exploring microbiome data through powerful visual analytics and statistical tools. This guide walks you through each feature and provides detailed information on input formats to ensure a smooth experience.
+**GOPICA** (Graphical Operations Platform for Interactive Community Analysis) is an interactive Shiny application for exploring microbiome data through powerful visual analytics and statistical tools. This guide walks you through each feature and provides detailed information on input formats to ensure a smooth experience.
 
 ---
 ## 1. Getting Started
 
-### What is MetaPiX?
+### What is GOPICA?
 
-MetaPiX is designed for microbiome researchers who need to:
+GOPICA is designed for microbiome researchers who need to:
 
 - Visualize taxonomic composition
 - Analyze alpha and beta diversity
@@ -195,9 +195,9 @@ Clean and prepare your data for analysis:
 
 ---
 
-## 6. Running MetaPiX Locally
+## 6. Running GOPICA Locally
 
-For optimal performance with large datasets, run MetaPiX on your local machine.
+For optimal performance with large datasets, run GOPICA on your local machine.
 
 ### Prerequisites
 
@@ -210,7 +210,7 @@ For optimal performance with large datasets, run MetaPiX on your local machine.
 #### Step 1: Clone Repository
 
 ```bash
-git clone https://github.com/shanptom/MetaPiX.git ~/Path/to/your/folder
+git clone https://github.com/shanptom/GOPICA.git ~/Path/to/your/folder
 ```
 
 #### Step 2: Install Dependencies

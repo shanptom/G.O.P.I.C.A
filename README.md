@@ -1,10 +1,10 @@
-# `MetaPiX`: Interactive Microbial Community Analysis in Shiny
+# `GOPICA`: Graphical Operations Platform for Interactive Community Analysis
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![R Shiny](https://img.shields.io/badge/built%20with-R%20Shiny-blue)](https://shiny.rstudio.com/)
 [![Status](https://img.shields.io/badge/status-active-brightgreen)]()
 
-`MetaPiX` is an interactive R Shiny application for exploring microbial community data. Designed for researchers analyzing high-throughput sequencing data (e.g., 16S/18S rRNA metabarcoding), `MetaPiX` provides a no-code interface to perform filtering, diversity analysis, ordination, and more—all from your web browser. This approach eliminates the need for programming expertise, making complex microbiome analysis accessible to a wider audience by simplifying the handling of intricate datasets.
+`GOPICA` is an interactive R Shiny application for exploring microbial community data. Designed for researchers analyzing high-throughput sequencing data (e.g., 16S/18S rRNA metabarcoding), `GOPICA` provides a no-code interface to perform filtering, diversity analysis, ordination, and more—all from your web browser. This approach eliminates the need for programming expertise, making complex microbiome analysis accessible to a wider audience by simplifying the handling of intricate datasets.
 
 ---
 
@@ -12,7 +12,7 @@
 
 A live version of the application is deployed on shinyapps.io.
 
-**[🚀 Launch MetaPiX](https://shanptom.shinyapps.io/MetaPiX/)**
+**[🚀 Launch GOPICA](https://shanptom.shinyapps.io/MetaPiX/)**
 
 ---
 ## 🚀 Features
@@ -40,8 +40,8 @@ A live version of the application is deployed on shinyapps.io.
 ### Step 1: Clone the Repository
 Clone this repository to your local machine to get started:
 ```bash
-git clone https://github.com/shanptom/MetaPiX.git
-cd MetaPiX
+git clone https://github.com/shanptom/GOPICA.git
+cd GOPICA
 ```
 
 ### Step 2: Install Dependencies
@@ -109,7 +109,7 @@ Sample data is available in the `data/` directory for testing and learning purpo
 
 ## 🧠 How It Works
 
-`MetaPiX` combines several powerful tools behind the scenes to make microbiome analysis straightforward. It's a modular Shiny application built on top of leading R packages from the microbiome analysis ecosystem.
+`GOPICA` combines several powerful tools behind the scenes to make microbiome analysis straightforward. It's a modular Shiny application built on top of leading R packages from the microbiome analysis ecosystem.
 
 - It uses `phyloseq` as the core data structure, seamlessly converting all user-uploaded CSVs into a `phyloseq` object for analysis.
 - For advanced analysis and visualization (e.g., ordination, correlation, regression), it leverages the robust classes from the `microeco` package.
@@ -119,7 +119,7 @@ Sample data is available in the `data/` directory for testing and learning purpo
 
 ## 🤝 Contact & Contributions
 
-For feedback, bug reports, or feature suggestions, please [open an issue](https://github.com/shanptom/MetaPiX/issues) on the GitHub repository.
+For feedback, bug reports, or feature suggestions, please [open an issue](https://github.com/shanptom/GOPICA/issues) on the GitHub repository.
 
 ---
 
@@ -131,7 +131,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## 📚 Citation
 
-If you use `MetaPiX` in a publication, please cite the underlying R packages that power the app:
+If you use `GOPICA` in a publication, please cite the underlying R packages that power the app:
 
 - **phyloseq**: McMurdie & Holmes (2013). *phyloseq: An R package for reproducible interactive analysis and graphics of microbiome census data*. PLoS ONE.
 - **microeco**: Liu et al. (2021). *microeco: an R package for data mining in microbial community ecology*. bioRxiv.
