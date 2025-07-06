@@ -1,4 +1,4 @@
-# MetaPiX Shiny Application
+# GOPICA Shiny Application
 # This is the main entry point for the MetaPiX application.
 # It sources the UI and server logic from separate files and launches the app.
 
