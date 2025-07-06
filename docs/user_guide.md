@@ -1,6 +1,6 @@
-# GOPICA
+# Graphical Operations Platform for Interactive Community Analysis
 
-**GOPICA** (Graphical Operations Platform for Interactive Community Analysis) is an interactive Shiny application for exploring microbiome data through powerful visual analytics and statistical tools. This guide walks you through each feature and provides detailed information on input formats to ensure a smooth experience.
+**Graphical Operations Platform for Interactive Community Analysis (GOPICA)** is an interactive Shiny application for exploring microbiome data through powerful visual analytics and statistical tools. This guide walks you through each feature and provides detailed information on input formats to ensure a smooth experience.
 
 ---
 ## 1. Getting Started
@@ -225,7 +225,7 @@ source("Path/to/install_dep.R")
 
 ```r
 library(shiny)
-runApp('/Path/to/MetaPiX.R')
+runApp('/Path/to/GOPICA.R')
 ```
 
 ### HPC Cluster Setup (Optional)
