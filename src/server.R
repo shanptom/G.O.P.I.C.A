@@ -11,7 +11,7 @@ library(ggalluvial)
 library(dplyr)
 library(ggcor)
 library(ggpubr)
-library(plotly)
+# library(plotly) # Commented out as we're using static ggplot2 plots
 
 server <- function(input, output, session) {
   final_physeq <- reactiveVal()
@@ -443,9 +443,8 @@ p4$data$Sample <- droplevels(p4$data$Sample)
     )
 })
 
-  output$abundancePlotly <- renderPlotly({
-    p <- abundance_plot_obj()
-    ggplotly(p)
+  output$abundancePlotly <- renderPlot({
+    abundance_plot_obj()
   })
   
   output$abundancePlotStatic <- renderPlot({
@@ -747,7 +746,7 @@ p4$data$Sample <- droplevels(p4$data$Sample)
                 selected = "None")
   })
   
-  output$tsne_plot <- renderPlotly({
+  output$tsne_plot <- renderPlot({
     req(input$run_tsne)
     req(final_physeq(), input$tsne_group)
     
@@ -759,7 +758,7 @@ p4$data$Sample <- droplevels(p4$data$Sample)
       labels = if (input$tsne_label != "None") input$tsne_label else NULL,
       colors = "default"
     )
-    ggplotly(p)
+    p
   })
   
   observeEvent(input$reset_tsne, {

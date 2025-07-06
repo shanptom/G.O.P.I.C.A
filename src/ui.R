@@ -3,7 +3,7 @@ library(shinyBS)
 library(shinyjs)
 library(shinycssloaders)
 library(bslib)
-library(plotly)
+# library(plotly) # Commented out as we're using static ggplot2 plots
 
 ui <- fluidPage(
   useShinyjs(),
@@ -15,7 +15,7 @@ ui <- fluidPage(
       });
     "))
   ),
-  navbarPage("MetaPix",
+  navbarPage("GOPICA",
                  id = "main_nav",
                  theme = bs_theme(
                    bootswatch = "morph", # https://bootswatch.com/
@@ -34,8 +34,8 @@ ui <- fluidPage(
                         # Column for Text (right side)
                         column(
                           width = 10,
-                          h2("Welcome to MetaPix"),
-                          p("This application allows you to explore microbial community data using various visualizations and analyses."),
+                          h2("Graphical Operations Platform for Interactive Community Analysis"),
+                          p("GOPICA allows you to explore microbial community data using various visualizations and analyses."),
                           tags$ul(
                             tags$li("💾 Start by uploading your ASV, taxonomy, and metadata tables (.csv) or phyloseq object (.rds) under 'Upload Data'."),
                             tags$li("🧪 Remove unwanted taxa and rarefy at the filtering tab."),
@@ -157,7 +157,7 @@ ui <- fluidPage(
                           sliderInput("beta_label_size", "Text Label Size:", min = 6, max = 20, value = 12),
                           checkboxInput("flip_abundance", "Flip axes (horizontal plot)", value = FALSE)
                         ),
-                        mainPanel(width = 9, withSpinner(uiOutput("abundance_plot_output")))
+                        mainPanel(width = 9, withSpinner(plotOutput("abundancePlotly", height = "770px", width = "100%")))
                       )
                  ),
 
@@ -252,7 +252,7 @@ ui <- fluidPage(
                                   ),
                                   conditionalPanel(
                                     condition = "output.show_tsne_flag",
-                                    withSpinner(plotlyOutput("tsne_plot", height = "770px", width = "100%"))
+                                    withSpinner(plotOutput("tsne_plot", height = "770px", width = "100%"))
                                   )
                         
                         )

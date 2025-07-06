@@ -5,14 +5,6 @@
 ---
 ## 1. Getting Started
 
-### What is GOPICA?
-
-GOPICA is designed for microbiome researchers who need to:
-
-- Visualize taxonomic composition
-- Analyze alpha and beta diversity
-- Explore relationships between microbes and environmental factors
-- Perform statistical testing on microbial communities
 
 ### Quick Start Workflow
 

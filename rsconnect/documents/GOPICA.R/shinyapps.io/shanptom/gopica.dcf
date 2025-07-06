@@ -1,0 +1,13 @@
+name: gopica
+title: gopica
+username: shanptom
+account: shanptom
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 15038804
+bundleId: 10573307
+url: https://shanptom.shinyapps.io/gopica/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .RData|LICENSE|README.md|SECURITY.md
