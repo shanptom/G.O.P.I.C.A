@@ -1,6 +1,7 @@
 
 cran_pkgs <- c("shiny", "shinyBS", "shinyjs", "shinycssloaders", "bslib",
                "ggplot2", "vegan", "microeco", "file2meco", "GUniFrac",
+               "ragg",
                "RColorBrewer", "ggalluvial", "dplyr", "ggpubr", "xgboost", "SHAPforxgboost")
 
 
