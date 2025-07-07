@@ -37,5 +37,5 @@ jobs:
       run: |
         Rscript -e "library(rsconnect)"
         Rscript -e "rsconnect::setAccountInfo(name = Sys.getenv('RSCONNECT_ACCOUNT'), token = Sys.getenv('RSCONNECT_TOKEN'), secret = Sys.getenv('RSCONNECT_SECRET'))"
-        Rscript -e "rsconnect::deployApp(appDir = '.', appPrimaryDoc = "GOPICA.R")"
+        Rscript -e "rsconnect::deployApp()"
 
