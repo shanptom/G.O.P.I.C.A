@@ -50,6 +50,7 @@ Run the following script from the R console to install all required dependencies
 source("scripts/install_dep.R")
 ```
 This script will install packages from CRAN, Bioconductor, and GitHub. If you encounter installation issues, check package compatibility or consult the GitHub issues page for troubleshooting tips.
+It also installs the **ragg** package, which GOPICA uses to render plots on systems without an X11 display.
 
 ### Step 3: Run the Application
 Once all dependencies are installed, launch the application in one of two ways:
