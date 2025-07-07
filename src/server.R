@@ -257,30 +257,17 @@ server <- function(input, output, session) {
     return(p)
   }
   
-  # Store the base rarefaction plot object to avoid recalculation
-  base_rarefaction_plot <- reactiveVal(NULL)
-  
-  observe({
-    req(final_physeq())
+  output$rarefactionPlot <- renderPlot({
+    req(final_physeq(), input$rare_color)
     ps <- final_physeq()
     otu_table(ps) <- otu_table(round(otu_table(ps)), taxa_are_rows = TRUE)
     if (any(sample_sums(ps) == 0)) {
       showNotification("Some samples have 0 counts. Rarefaction plot may not work.", type = "error")
-      base_rarefaction_plot(NULL)
-    } else {
-      # Create the base plot without color or other aesthetics that might change
-      base_plot <- ggrare(ps, step = 100, label = "Sample", se = FALSE) + theme_minimal()
-      base_rarefaction_plot(base_plot)
-    }
-  })
-  
-  output$rarefactionPlot <- renderPlot({
-    req(base_rarefaction_plot(), input$rare_color)
-    p <- base_rarefaction_plot()
-    if (is.null(p)) {
       return(NULL)
     }
-    # Apply color aesthetic dynamically
+
+    # Create the base plot dynamically within the plotting device
+    p <- ggrare(ps, step = 100, label = "Sample", se = FALSE) + theme_minimal()
     p <- p + aes(color = !!sym(input$rare_color))
     
     if (!is.null(input$rare_facet) && input$rare_facet != "None") {
