@@ -485,7 +485,7 @@ p4$data$Sample <- droplevels(p4$data$Sample)
       x = x_var,
       measures = input$alpha_index,
       scales = scale_type
-    ) + geom_point(size = 7)
+    ) + geom_point(size = 7)+ theme_minimal()
 
     p + geom_point(size=5, alpha=0.7)
     
