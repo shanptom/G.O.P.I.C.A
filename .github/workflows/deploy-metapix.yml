@@ -27,8 +27,5 @@ jobs:
         RSCONNECT_SECRET: ${{ secrets.SHINYAPPS_SECRET }}
         APP_NAME: ${{ secrets.SHINYAPPS_NAME }}
       run: |
-        library(rsconnect)
-        rsconnect::setAccountInfo(name = Sys.getenv("RSCONNECT_ACCOUNT"),
-                                  token = Sys.getenv("RSCONNECT_TOKEN"),
-                                  secret = Sys.getenv("RSCONNECT_SECRET"))
-        rsconnect::deployApp(appDir = ".", appName = Sys.getenv("APP_NAME"))
+    Rscript -e "library(rsconnect); rsconnect::setAccountInfo(name = Sys.getenv('RSCONNECT_ACCOUNT'), token = Sys.getenv('RSCONNECT_TOKEN'), secret = Sys.getenv('RSCONNECT_SECRET')); rsconnect::deployApp(appDir = '.', appName = Sys.getenv('APP_NAME'))"
+
