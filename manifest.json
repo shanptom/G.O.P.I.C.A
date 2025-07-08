@@ -7146,8 +7146,8 @@
     }
   },
   "files": {
-    ".github/workflows/deploy.yml": {
-      "checksum": "bce5050814732f7faff3b4e58b49b69d"
+    ".github/workflows/deploy-gopica.yml": {
+      "checksum": "f7225507abbe64e4c039a27a1f5dd062"
     },
     ".RData": {
       "checksum": "45cd5574ef9d1dd34cfc8ae6e158b06b"
