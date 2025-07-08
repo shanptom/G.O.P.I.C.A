@@ -37,12 +37,12 @@ ui <- fluidPage(
                           h2("Graphical Operations Platform for Interactive Community Analysis"),
                           p("GOPICA allows you to explore microbial community data using various visualizations and analyses."),
                           tags$ul(
-                            tags$li("💾 Start by uploading your ASV, taxonomy, and metadata tables (.csv) or phyloseq object (.rds) under 'Upload Data'."),
-                            tags$li("🧪 Remove unwanted taxa and rarefy at the filtering tab."),
-                            tags$li("📈 Explore abundance, diversity, and dendrograms in the respective tabs."),
-                            tags$li("🎯 Customize plots with the sidebar controls."),
-                            tags$li("🧬 All plots support dynamic interaction based on your metadata."),
-                            tags$li("👨‍💻 No coding experience required — just upload your files and explore!")
+                            tags$li(" Start by uploading your ASV, taxonomy, and metadata tables (.csv) or phyloseq object (.rds) under 'Upload Data'."),
+                            tags$li(" Remove unwanted taxa and rarefy at the filtering tab."),
+                            tags$li(" Explore abundance, diversity, and dendrograms in the respective tabs."),
+                            tags$li(" Customize plots with the sidebar controls."),
+                            tags$li(" All plots support dynamic interaction based on your metadata."),
+                            tags$li(" No coding experience required — just upload your files and explore!")
                           ),
                           br(),
                           
