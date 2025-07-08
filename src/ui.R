@@ -15,7 +15,7 @@ ui <- fluidPage(
       });
     "))
   ),
-  navbarPage("GOPICA",
+  navbarPage("goPICa",
                  id = "main_nav",
                  theme = bs_theme(
                    bootswatch = "morph", # https://bootswatch.com/
