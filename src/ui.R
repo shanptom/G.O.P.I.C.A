@@ -42,7 +42,7 @@ ui <- fluidPage(
                             tags$li(" Explore abundance, diversity, and dendrograms in the respective tabs."),
                             tags$li(" Customize plots with the sidebar controls."),
                             tags$li(" All plots support dynamic interaction based on your metadata."),
-                            tags$li(" No coding experience required — just upload your files and explore!")
+                            tags$li(" No coding experience required - just upload your files and explore!")
                           ),
                           br(),
                           
