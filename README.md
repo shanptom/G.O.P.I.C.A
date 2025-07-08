@@ -1,10 +1,10 @@
-# `GOPICA`: Graphical Operations Platform for Interactive Community Analysis
+# `goPICa`: Graphical Operations Platform for Interactive Community Analysis
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![R Shiny](https://img.shields.io/badge/built%20with-R%20Shiny-blue)](https://shiny.rstudio.com/)
 [![Status](https://img.shields.io/badge/status-active-brightgreen)]()
 
-`GOPICA` is an interactive R Shiny application for exploring microbial community data. Designed for researchers analyzing high-throughput sequencing data (e.g., 16S/18S rRNA metabarcoding), `GOPICA` provides a no-code interface to perform filtering, diversity analysis, ordination, and more—all from your web browser. This approach eliminates the need for programming expertise, making complex microbiome analysis accessible to a wider audience by simplifying the handling of intricate datasets.
+`goPICa` is an interactive R Shiny application for exploring microbial community data. Designed for researchers analyzing high-throughput sequencing data (e.g., 16S/18S rRNA metabarcoding), `goPICa` provides a no-code interface to perform filtering, diversity analysis, ordination, and more—all from your web browser. This approach eliminates the need for programming expertise, making complex microbiome analysis accessible to a wider audience by simplifying the handling of intricate datasets.
 
 ---
 
@@ -12,7 +12,7 @@
 
 A live version of the application is deployed on shinyapps.io.
 
-**[🚀 Launch GOPICA](https://shanptom.shinyapps.io/MetaPiX/)**
+**[🚀 Launch goPICa](https://shanptom-gopica.share.connect.posit.cloud)**
 
 ---
 ## 🚀 Features
@@ -40,8 +40,8 @@ A live version of the application is deployed on shinyapps.io.
 ### Step 1: Clone the Repository
 Clone this repository to your local machine to get started:
 ```bash
-git clone https://github.com/shanptom/GOPICA.git
-cd GOPICA
+git clone https://github.com/shanptom/goPICa.git
+cd goPICa
 ```
 
 ### Step 2: Install Dependencies
@@ -50,14 +50,14 @@ Run the following script from the R console to install all required dependencies
 source("scripts/install_dep.R")
 ```
 This script will install packages from CRAN, Bioconductor, and GitHub. If you encounter installation issues, check package compatibility or consult the GitHub issues page for troubleshooting tips.
-It also installs the **ragg** package, which GOPICA uses to render plots on systems without an X11 display.
+It also installs the **ragg** package, which goPICa uses to render plots on systems without an X11 display.
 
 ### Step 3: Run the Application
 Once all dependencies are installed, launch the application in one of two ways:
-1. **From RStudio**: Open the `GOPICA.R` file and click the "Run App" button in the top-right corner of the editor pane.
+1. **From RStudio**: Open the `app.R` file and click the "Run App" button in the top-right corner of the editor panel.
 2. **From the R Console**:
    ```R
-   shiny::runApp("GOPICA.R")
+   shiny::runApp("app.R")
    ```
 
 The application will open in a new window or your default web browser.
@@ -110,7 +110,7 @@ Sample data is available in the `data/` directory for testing and learning purpo
 
 ## 🧠 How It Works
 
-`GOPICA` combines several powerful tools behind the scenes to make microbiome analysis straightforward. It's a modular Shiny application built on top of leading R packages from the microbiome analysis ecosystem.
+`goPICa` combines several powerful tools behind the scenes to make microbiome analysis straightforward. It's a modular Shiny application built on top of leading R packages from the microbiome analysis ecosystem.
 
 - It uses `phyloseq` as the core data structure, seamlessly converting all user-uploaded CSVs into a `phyloseq` object for analysis.
 - For advanced analysis and visualization (e.g., ordination, correlation, regression), it leverages the robust classes from the `microeco` package.
@@ -132,7 +132,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## 📚 Citation
 
-If you use `GOPICA` in a publication, please cite the underlying R packages that power the app:
+If you use `goPICa` in a publication, please cite the underlying R packages that power the app:
 
 - **phyloseq**: McMurdie & Holmes (2013). *phyloseq: An R package for reproducible interactive analysis and graphics of microbiome census data*. PLoS ONE.
 - **microeco**: Liu et al. (2021). *microeco: an R package for data mining in microbial community ecology*. bioRxiv.
