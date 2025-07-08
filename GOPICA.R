@@ -1,4 +1,4 @@
-# GOPICA Shiny Application
+# goPICA Shiny Application
 
 options(shiny.useragg = TRUE)
 options(bitmapType = "cairo")
