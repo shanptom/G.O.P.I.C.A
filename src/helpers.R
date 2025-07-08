@@ -1,4 +1,4 @@
-# Helper functions for MetaPiX Shiny Application
+# Helper functions for goPICa Shiny Application
 # This file contains reusable functions to reduce code duplication in the application.
 
 #' Reorder Factor Column in Plot Data
