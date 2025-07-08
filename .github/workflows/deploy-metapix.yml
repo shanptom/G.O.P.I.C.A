@@ -37,5 +37,6 @@ jobs:
       run: |
         Rscript -e "library(rsconnect)"
         Rscript -e "rsconnect::setAccountInfo(name = Sys.getenv('RSCONNECT_ACCOUNT'), token = Sys.getenv('RSCONNECT_TOKEN'), secret = Sys.getenv('RSCONNECT_SECRET'))"
-        Rscript -e "rsconnect::deployApp(appName = Sys.getenv('APP_NAME'))"
+        Rscript -e "rsconnect::deployApp(appDir = '.', appName = Sys.getenv('APP_NAME'), appPrimaryDoc = NULL, account = Sys.getenv('RSCONNECT_ACCOUNT'), forceUpdate = TRUE)"
+
 
