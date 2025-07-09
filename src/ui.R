@@ -35,7 +35,7 @@ ui <- fluidPage(
                         column(
                           width = 10,
                           h2("Graphical Operations Platform for Interactive Community Analysis"),
-                          p("GOPICA allows you to explore microbial community data using various visualizations and analyses."),
+                          p("goPICa allows you to explore microbial community data using various visualizations and analyses."),
                           tags$ul(
                             tags$li(" Start by uploading your ASV, taxonomy, and metadata tables (.csv) or phyloseq object (.rds) under 'Upload Data'."),
                             tags$li(" Remove unwanted taxa and rarefy at the filtering tab."),
